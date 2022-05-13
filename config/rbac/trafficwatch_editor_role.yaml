@@ -1,0 +1,24 @@
+# permissions for end users to edit trafficwatches.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trafficwatch-editor-role
+rules:
+- apiGroups:
+  - traffic.example.com
+  resources:
+  - trafficwatches
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - traffic.example.com
+  resources:
+  - trafficwatches/status
+  verbs:
+  - get

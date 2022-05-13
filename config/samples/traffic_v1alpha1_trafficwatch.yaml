@@ -1,0 +1,6 @@
+apiVersion: traffic.example.com/v1alpha1
+kind: TrafficWatch
+metadata:
+  name: trafficwatch-sample
+spec:
+  # TODO(user): Add fields here
