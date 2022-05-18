@@ -1,0 +1,45 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: traffic-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: TrafficWatch is the Schema for the trafficwatches API
+      displayName: Traffic Watch
+      kind: TrafficWatch
+      name: trafficwatches.traffic.example.com
+      version: v1alpha1
+  description: Operator managing pod placement based on network traffic limits
+  displayName: Traffic Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - traffic
+  - autoscaling
+  links:
+  - name: Traffic Operator
+    url: https://traffic-operator.domain
+  maturity: alpha
+  provider:
+    name: PKopel
+  version: 0.0.0
