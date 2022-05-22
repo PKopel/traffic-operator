@@ -1,0 +1,16 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: traffic-operator-node-exporter-servie
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9100"
+spec:
+  selector:
+    app.kubernetes.io/component: traffic-operator-exporter
+    app.kubernetes.io/name: traffic-operator-node-exporter
+  ports:
+    - name: traffic-operator-node-exporter
+      protocol: TCP
+      port: 9100
+      targetPort: 9100

@@ -32,7 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	trafficv1alpha1 "github.com/PKopel/traffic-operator/api/v1alpha1"
-	"github.com/PKopel/traffic-operator/controllers"
+	"github.com/PKopel/traffic-operator/internal/controllers"
+	"github.com/PKopel/traffic-operator/internal/initializers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -95,6 +96,9 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	setupLog.Info("Deploying Node Exporter")
+	initializers.InitializeNodeExporter(mgr.GetClient())
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

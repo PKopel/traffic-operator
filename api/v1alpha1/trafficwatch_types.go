@@ -28,14 +28,35 @@ type TrafficWatchSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of TrafficWatch. Edit trafficwatch_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// MaxBandwidthPercent defines amount of traffic that will cause a Node
+	// to be matrked as "unfit"
+	MaxBandwidthPercent float64 `json:"maxBandwidthPercent"`
 }
 
 // TrafficWatchStatus defines the observed state of TrafficWatch
 type TrafficWatchStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+
+	// Nodes current status of nodes
+	Nodes []CurrentNodeTraffic `json:"nodes"`
+}
+
+type CurrentNodeTraffic struct {
+	// Name of the Node
+	Name string `json:"name"`
+
+	// CurrentBandwidthPercent shows average use of bandwidth in last 10s
+	CurrentBandwidthPercent float64 `json:"currentBandwidthPercent"`
+
+	// CurrentTransmitTotal
+	CurrentTransmitTotal float64 `json:"currentTransmitTotal"`
+
+	// Time
+	Time int64 `json:"time"`
+
+	// Unfit is marked as "unfit"
+	Unfit bool `json:"unfit"`
 }
 
 //+kubebuilder:object:root=true

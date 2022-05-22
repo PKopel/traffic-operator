@@ -34,10 +34,12 @@ spec:
           spec:
             description: TrafficWatchSpec defines the desired state of TrafficWatch
             properties:
-              foo:
-                description: Foo is an example field of TrafficWatch. Edit trafficwatch_types.go
-                  to remove/update
-                type: string
+              maxBandwidthPercent:
+                description: MaxBandwidthPercent defines amount of traffic that will
+                  cause a Node to be matrked as "unfit"
+                type: integer
+            required:
+            - maxBandwidthPercent
             type: object
           status:
             description: TrafficWatchStatus defines the observed state of TrafficWatch
