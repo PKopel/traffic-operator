@@ -43,6 +43,10 @@ func ParseAll(metrics io.ReadCloser) ([]Metric, error) {
 
 	lines := strings.Split(text, "\n")
 
+	lines = Filter(lines, func(line string) bool {
+		return !strings.Contains(line, "#")
+	})
+
 	result := make([]Metric, len(lines))
 
 	for i, line := range lines {

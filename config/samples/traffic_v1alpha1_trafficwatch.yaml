@@ -3,4 +3,4 @@ kind: TrafficWatch
 metadata:
   name: trafficwatch-sample
 spec:
-  # TODO(user): Add fields here
+  maxBandwidthPercent: 60

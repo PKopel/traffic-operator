@@ -38,12 +38,47 @@ spec:
               maxBandwidthPercent:
                 description: MaxBandwidthPercent defines amount of traffic that will
                   cause a Node to be matrked as "unfit"
+                format: int64
                 type: integer
             required:
             - maxBandwidthPercent
             type: object
           status:
             description: TrafficWatchStatus defines the observed state of TrafficWatch
+            properties:
+              nodes:
+                description: Nodes current status of nodes
+                items:
+                  properties:
+                    currentBandwidthPercent:
+                      description: CurrentBandwidthPercent shows average use of bandwidth
+                        in last 10s
+                      format: int64
+                      type: integer
+                    currentTransmitTotal:
+                      description: CurrentTransmitTotal
+                      format: int64
+                      type: integer
+                    name:
+                      description: Name of the Node
+                      type: string
+                    time:
+                      description: Time
+                      format: int64
+                      type: integer
+                    unfit:
+                      description: Unfit is marked as "unfit"
+                      type: boolean
+                  required:
+                  - currentBandwidthPercent
+                  - currentTransmitTotal
+                  - name
+                  - time
+                  - unfit
+                  type: object
+                type: array
+            required:
+            - nodes
             type: object
         type: object
     served: true

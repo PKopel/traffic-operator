@@ -30,7 +30,7 @@ type TrafficWatchSpec struct {
 
 	// MaxBandwidthPercent defines amount of traffic that will cause a Node
 	// to be matrked as "unfit"
-	MaxBandwidthPercent float64 `json:"maxBandwidthPercent"`
+	MaxBandwidthPercent int64 `json:"maxBandwidthPercent"`
 }
 
 // TrafficWatchStatus defines the observed state of TrafficWatch
@@ -47,10 +47,10 @@ type CurrentNodeTraffic struct {
 	Name string `json:"name"`
 
 	// CurrentBandwidthPercent shows average use of bandwidth in last 10s
-	CurrentBandwidthPercent float64 `json:"currentBandwidthPercent"`
+	CurrentBandwidthPercent int64 `json:"currentBandwidthPercent"`
 
 	// CurrentTransmitTotal
-	CurrentTransmitTotal float64 `json:"currentTransmitTotal"`
+	CurrentTransmitTotal int64 `json:"currentTransmitTotal"`
 
 	// Time
 	Time int64 `json:"time"`

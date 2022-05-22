@@ -4,6 +4,7 @@ import (
 	"context"
 
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -18,6 +19,7 @@ metadata:
     app.kubernetes.io/component: traffic-operator-exporter
     app.kubernetes.io/name: traffic-operator-node-exporter
   name: traffic-operator-node-exporter
+  namespace: system
 spec:
   selector:
     matchLabels:
@@ -69,13 +71,18 @@ spec:
 `
 
 func InitializeNodeExporter(client client.Client) error {
+	ctx := context.Background()
+
 	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDecoder()
 	daemonSet := &appsv1.DaemonSet{}
+
 	err := runtime.DecodeInto(decoder, []byte(NodeExporterDaemonSetYaml), daemonSet)
 	if err != nil {
 		return err
 	}
 
-	ctx := context.Background()
-	return client.Create(ctx, daemonSet)
+	if err := client.Create(ctx, daemonSet); err != nil && !errors.IsAlreadyExists(err) {
+		return err
+	}
+	return nil
 }

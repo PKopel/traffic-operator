@@ -98,7 +98,10 @@ func main() {
 	}
 
 	setupLog.Info("Deploying Node Exporter")
-	initializers.InitializeNodeExporter(mgr.GetClient())
+	if err := initializers.InitializeNodeExporter(mgr.GetClient()); err != nil {
+		setupLog.Error(err, "problem deploying Node Exporter")
+		os.Exit(1)
+	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

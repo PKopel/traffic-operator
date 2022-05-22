@@ -76,16 +76,18 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	nodes := &corev1.NodeList{}
-	if err := r.Client.List(ctx, nodes); err != nil {
+	nodes := &corev1.PodList{}
+
+	listOptions := client.MatchingLabels{"app.kubernetes.io/component": "traffic-operator-exporter"}
+
+	if err := r.Client.List(ctx, nodes, listOptions); err != nil {
 		return ctrl.Result{RequeueAfter: longWait}, err
 	}
 
-	for i, node := range nodes.Items {
-		addr := node.Status.Addresses[0].Address
+	for i, pod := range nodes.Items {
+		addr := pod.Status.PodIP
 		url := fmt.Sprintf("http://%s:9100/metrics", addr)
 
-		prevTime := tw.Status.Nodes[i].Time
 		time := time.Now().Unix()
 
 		resp, err := http.Get(url)
@@ -107,7 +109,6 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		})
 
 		var totalSpeed, totalTransmit float64
-		prevTransmit := tw.Status.Nodes[i].CurrentTransmitTotal
 
 		for _, sm := range speedMetrics {
 			tm := utils.First(transmitMetrics, func(m utils.Metric) bool {
@@ -129,12 +130,18 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			totalTransmit += tmv
 		}
 
-		bwPercent := (totalTransmit - prevTransmit) / (float64(time-prevTime) * totalSpeed)
+		if len(tw.Status.Nodes) > 0 {
+			prevTime := tw.Status.Nodes[i].Time
+			prevTransmit := float64(tw.Status.Nodes[i].CurrentTransmitTotal)
+			bwPercent := int64((totalTransmit - prevTransmit) * 100 / (float64(time-prevTime) * totalSpeed))
 
-		tw.Status.Nodes[i].CurrentTransmitTotal = totalTransmit
-		tw.Status.Nodes[i].CurrentBandwidthPercent = bwPercent
-		tw.Status.Nodes[i].Time = time
-		tw.Status.Nodes[i].Unfit = bwPercent > tw.Spec.MaxBandwidthPercent
+			tw.Status.Nodes[i].CurrentTransmitTotal = int64(totalTransmit)
+			tw.Status.Nodes[i].CurrentBandwidthPercent = bwPercent
+			tw.Status.Nodes[i].Time = time
+			tw.Status.Nodes[i].Unfit = bwPercent > tw.Spec.MaxBandwidthPercent
+		} else {
+			logger.Info("Empty status")
+		}
 	}
 
 	if err := r.Client.Update(ctx, tw); err != nil {
