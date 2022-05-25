@@ -13,17 +13,27 @@ type Metric struct {
 }
 
 func ParseLine(line string) Metric {
-	split := strings.Split(line, "{")
-	name := split[0]
-	rest := split[1]
-	split = strings.Split(rest, "} ")
-	value := split[1]
-
 	labels := make(map[string]string)
-	for _, label := range strings.Split(split[0], ",") {
-		pair := strings.Split(label, "=")
-		labels[pair[0]] = pair[1]
+	var name string
+	var value string
+
+	if strings.Contains(line, "{") {
+		split := strings.Split(line, "{")
+		name = split[0]
+		rest := split[1]
+		split = strings.Split(rest, "} ")
+		value = split[1]
+
+		for _, label := range strings.Split(split[0], ",") {
+			pair := strings.Split(label, "=")
+			labels[pair[0]] = pair[1]
+		}
+	} else {
+		split := strings.Split(line, " ")
+		name = split[0]
+		value = split[1]
 	}
+
 	return Metric{
 		Name:   name,
 		Labels: labels,
@@ -44,7 +54,7 @@ func ParseAll(metrics io.ReadCloser) ([]Metric, error) {
 	lines := strings.Split(text, "\n")
 
 	lines = Filter(lines, func(line string) bool {
-		return !strings.Contains(line, "#")
+		return !strings.Contains(line, "#") && strings.ContainsAny(line, "_={}\"")
 	})
 
 	result := make([]Metric, len(lines))

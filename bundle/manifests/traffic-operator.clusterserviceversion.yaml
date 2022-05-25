@@ -10,7 +10,9 @@ metadata:
           "metadata": {
             "name": "trafficwatch-sample"
           },
-          "spec": null
+          "spec": {
+            "maxBandwidthPercent": 60
+          }
         }
       ]
     capabilities: Basic Install
@@ -36,6 +38,19 @@ spec:
     spec:
       clusterPermissions:
       - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          verbs:
+          - list
+          - watch
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          verbs:
+          - create
         - apiGroups:
           - traffic.example.com
           resources:
@@ -118,6 +133,7 @@ spec:
                 command:
                 - /manager
                 image: controller:latest
+                imagePullPolicy: IfNotPresent
                 livenessProbe:
                   httpGet:
                     path: /healthz

@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -72,19 +73,21 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	logger.Info("Reconciling...")
 
 	tw := &v1alpha1.TrafficWatch{}
-	if err := r.Client.Get(ctx, req.NamespacedName, tw); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, tw); err != nil {
+		logger.Info("Get TrafficWatch error")
 		return ctrl.Result{}, err
 	}
 
-	nodes := &corev1.PodList{}
+	pods := &corev1.PodList{}
 
 	listOptions := client.MatchingLabels{"app.kubernetes.io/component": "traffic-operator-exporter"}
 
-	if err := r.Client.List(ctx, nodes, listOptions); err != nil {
+	if err := r.List(ctx, pods, listOptions); err != nil {
+		logger.Info("List Nodes error")
 		return ctrl.Result{RequeueAfter: longWait}, err
 	}
 
-	for i, pod := range nodes.Items {
+	for i, pod := range pods.Items {
 		addr := pod.Status.PodIP
 		url := fmt.Sprintf("http://%s:9100/metrics", addr)
 
@@ -92,11 +95,13 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		resp, err := http.Get(url)
 		if err != nil {
+			logger.Info("Metric request error")
 			return ctrl.Result{RequeueAfter: longWait}, err
 		}
 
 		metrics, err := utils.ParseAll(resp.Body)
 		if err != nil {
+			logger.Info("Metric parsing error")
 			return ctrl.Result{RequeueAfter: longWait}, err
 		}
 
@@ -120,31 +125,41 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 			smv, err := strconv.ParseFloat(sm.Value, 64)
 			if err != nil {
+				logger.Info("Could not parse smv float")
 				continue
 			}
 			tmv, err := strconv.ParseFloat(tm.Value, 64)
 			if err != nil {
+				logger.Info("Could not parse tmv float")
 				continue
 			}
 			totalSpeed += smv
 			totalTransmit += tmv
 		}
 
-		if len(tw.Status.Nodes) > 0 {
+		if len(tw.Status.Nodes) == len(pods.Items) {
 			prevTime := tw.Status.Nodes[i].Time
 			prevTransmit := float64(tw.Status.Nodes[i].CurrentTransmitTotal)
-			bwPercent := int64((totalTransmit - prevTransmit) * 100 / (float64(time-prevTime) * totalSpeed))
+			bwPercent := int64(math.Round((totalTransmit - prevTransmit) * 100 / (float64(time-prevTime) * totalSpeed)))
 
 			tw.Status.Nodes[i].CurrentTransmitTotal = int64(totalTransmit)
 			tw.Status.Nodes[i].CurrentBandwidthPercent = bwPercent
 			tw.Status.Nodes[i].Time = time
 			tw.Status.Nodes[i].Unfit = bwPercent > tw.Spec.MaxBandwidthPercent
 		} else {
-			logger.Info("Empty status")
+			node := trafficv1alpha1.CurrentNodeTraffic{
+				CurrentTransmitTotal:    int64(totalTransmit),
+				CurrentBandwidthPercent: 0,
+				Time:                    time,
+				Unfit:                   false,
+			}
+
+			tw.Status.Nodes = append(tw.Status.Nodes, node)
 		}
 	}
 
-	if err := r.Client.Update(ctx, tw); err != nil {
+	if err := r.Status().Update(ctx, tw); err != nil {
+		logger.Info("Update TrafficWatch error")
 		return ctrl.Result{RequeueAfter: longWait}, err
 	}
 
