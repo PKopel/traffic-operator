@@ -19,7 +19,7 @@ metadata:
     app.kubernetes.io/component: traffic-operator-exporter
     app.kubernetes.io/name: traffic-operator-node-exporter
   name: traffic-operator-node-exporter
-  namespace: system
+  namespace: traffic-operator-system
 spec:
   selector:
     matchLabels:

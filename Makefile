@@ -12,6 +12,8 @@ VERSION ?= 0.0.1
 # - use environment variables to overwrite this value (e.g export CHANNELS="candidate,fast,stable")
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
+else
+BUNDLE_CHANNELS := --channels=alpha
 endif
 
 # DEFAULT_CHANNEL defines the default channel used in the bundle.
@@ -21,6 +23,8 @@ endif
 # - use environment variables to overwrite this value (e.g export DEFAULT_CHANNEL="stable")
 ifneq ($(origin DEFAULT_CHANNEL), undefined)
 BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
+else
+BUNDLE_DEFAULT_CHANNEL := --default-channel=alpha
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 

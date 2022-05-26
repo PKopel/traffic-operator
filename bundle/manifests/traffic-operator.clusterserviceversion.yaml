@@ -132,8 +132,8 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: pkopel/traffic-operator
-                imagePullPolicy: IfNotPresent
+                image: pkopel/traffic-operator:v0.0.1
+                imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -196,13 +196,13 @@ spec:
         serviceAccountName: traffic-operator-controller-manager
     strategy: deployment
   installModes:
-  - supported: false
+  - supported: true
     type: OwnNamespace
   - supported: false
     type: SingleNamespace
   - supported: false
     type: MultiNamespace
-  - supported: true
+  - supported: false
     type: AllNamespaces
   keywords:
   - traffic

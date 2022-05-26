@@ -1,0 +1,8 @@
+kind: OperatorGroup
+apiVersion: operators.coreos.com/v1
+metadata:
+  name: traffic-operator-og
+  namespace: traffic-operator-system
+spec:
+  targetNamespaces:
+    - "traffic-operator-system"

@@ -29,10 +29,10 @@ spec:
       containers:
         - command:
             - /manager
-          # args:
-          #   - --leader-elect
-          image: pkopel/traffic-operator
-          imagePullPolicy: IfNotPresent
+          args:
+            - --leader-elect
+          image: pkopel/traffic-operator:v0.0.1
+          imagePullPolicy: Always
           name: manager
           securityContext:
             allowPrivilegeEscalation: false
