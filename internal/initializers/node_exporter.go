@@ -67,8 +67,10 @@ spec:
         - hostPath:
             path: /
           name: root
-
 `
+
+// RBAC for creating DaemonSet
+//+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create
 
 func InitializeNodeExporter(client client.Client) error {
 	ctx := context.Background()

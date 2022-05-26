@@ -11,7 +11,7 @@ metadata:
             "name": "trafficwatch-sample"
           },
           "spec": {
-            "maxBandwidthPercent": 60
+            "maxBandwidthPercent": "60"
           }
         }
       ]
@@ -132,7 +132,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: controller:latest
+                image: pkopel/traffic-operator
                 imagePullPolicy: IfNotPresent
                 livenessProbe:
                   httpGet:

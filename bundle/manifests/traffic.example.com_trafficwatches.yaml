@@ -36,9 +36,8 @@ spec:
             properties:
               maxBandwidthPercent:
                 description: MaxBandwidthPercent defines amount of traffic that will
-                  cause a Node to be matrked as "unfit"
-                format: int64
-                type: integer
+                  cause a Node to be matrked as "unfit" as a floating point value
+                type: string
             required:
             - maxBandwidthPercent
             type: object
@@ -52,8 +51,7 @@ spec:
                     currentBandwidthPercent:
                       description: CurrentBandwidthPercent shows average use of bandwidth
                         in last 10s
-                      format: int64
-                      type: integer
+                      type: string
                     currentTransmitTotal:
                       description: CurrentTransmitTotal
                       format: int64

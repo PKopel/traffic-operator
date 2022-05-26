@@ -3,4 +3,4 @@ kind: TrafficWatch
 metadata:
   name: trafficwatch-sample
 spec:
-  maxBandwidthPercent: 60
+  maxBandwidthPercent: "60"

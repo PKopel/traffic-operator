@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -27,7 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/PKopel/traffic-operator/api/v1alpha1"
 	trafficv1alpha1 "github.com/PKopel/traffic-operator/api/v1alpha1"
@@ -51,19 +52,14 @@ type TrafficWatchReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+// RBAC for TrafficWatch
 //+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/finalizers,verbs=update
+// RBAC for listing Pods
+//+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the TrafficWatch object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
+// Reconcile updates TrafficWatch with current network usage statistics from worker nodes
 func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	ctx, cancel := context.WithTimeout(ctx, reconcileTimeout)
@@ -140,16 +136,21 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if len(tw.Status.Nodes) == len(pods.Items) {
 			prevTime := tw.Status.Nodes[i].Time
 			prevTransmit := float64(tw.Status.Nodes[i].CurrentTransmitTotal)
-			bwPercent := int64(math.Round((totalTransmit - prevTransmit) * 100 / (float64(time-prevTime) * totalSpeed)))
+			bwPercent := (totalTransmit - prevTransmit) * 100 / (float64(time-prevTime) * totalSpeed)
+			bwMax, err := strconv.ParseFloat(tw.Spec.MaxBandwidthPercent, 64)
+			if err != nil {
+				logger.Info("Could not parse maxBandwidthPercent float")
+				continue
+			}
 
 			tw.Status.Nodes[i].CurrentTransmitTotal = int64(totalTransmit)
-			tw.Status.Nodes[i].CurrentBandwidthPercent = bwPercent
+			tw.Status.Nodes[i].CurrentBandwidthPercent = strconv.FormatFloat(bwPercent, 'e', -1, 64)
 			tw.Status.Nodes[i].Time = time
-			tw.Status.Nodes[i].Unfit = bwPercent > tw.Spec.MaxBandwidthPercent
+			tw.Status.Nodes[i].Unfit = bwPercent > bwMax
 		} else {
 			node := trafficv1alpha1.CurrentNodeTraffic{
 				CurrentTransmitTotal:    int64(totalTransmit),
-				CurrentBandwidthPercent: 0,
+				CurrentBandwidthPercent: "0",
 				Time:                    time,
 				Unfit:                   false,
 			}
@@ -166,9 +167,31 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return ctrl.Result{RequeueAfter: shortWait}, nil
 }
 
+// filterStatusUpdates blocks reconciliations caused by status updates
+func filterStatusUpdates() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			if oldTw, ok := e.ObjectOld.(*trafficv1alpha1.TrafficWatch); ok {
+				newTw, _ := e.ObjectNew.(*trafficv1alpha1.TrafficWatch)
+				// Is TrafficWatch, ignore status and metadata updates
+				return newTw.Spec != oldTw.Spec
+			}
+			// Is not TrafficWatch
+			return true
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return !e.DeleteStateUnknown
+		},
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *TrafficWatchReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&trafficv1alpha1.TrafficWatch{}).
+		WithEventFilter(filterStatusUpdates()).
 		Complete(r)
 }

@@ -2,6 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: traffic-operator-node-exporter-servie
+  namespace: system
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "9100"
