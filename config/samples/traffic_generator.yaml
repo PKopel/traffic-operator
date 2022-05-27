@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-generator
+  namespace: default
+  labels:
+    app.kubernetes.io/component: traffic-generator
+    app.kubernetes.io/name: traffic-generator
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: traffic-generator
+      app.kubernetes.io/name: traffic-generator
+  replicas: 6
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: traffic-generator
+        app.kubernetes.io/name: traffic-generator
+    spec:
+      nodeName: kind-worker
+      containers:
+        - name: bash
+          image: bash
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 64Mi
+          command:
+            - bash
+            - -c
+            - |
+              while true; do
+                  wget --no-check-certificate "http://www.gutenberg.org/files/1301/1301-0.txt" -O - > /dev/null
+              done

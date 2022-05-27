@@ -41,6 +41,14 @@ spec:
         - apiGroups:
           - ""
           resources:
+          - endpoints
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
           - pods
           verbs:
           - list

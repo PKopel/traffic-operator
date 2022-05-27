@@ -119,8 +119,10 @@ func (in *TrafficWatchStatus) DeepCopyInto(out *TrafficWatchStatus) {
 	*out = *in
 	if in.Nodes != nil {
 		in, out := &in.Nodes, &out.Nodes
-		*out = make([]CurrentNodeTraffic, len(*in))
-		copy(*out, *in)
+		*out = make(map[string]CurrentNodeTraffic, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 }
 

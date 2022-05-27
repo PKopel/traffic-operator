@@ -20,14 +20,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // TrafficWatchSpec defines the desired state of TrafficWatch
 type TrafficWatchSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// MaxBandwidthPercent defines amount of traffic that will cause a Node
 	// to be matrked as "unfit" as a floating point value
 	MaxBandwidthPercent string `json:"maxBandwidthPercent"`
@@ -35,17 +29,11 @@ type TrafficWatchSpec struct {
 
 // TrafficWatchStatus defines the observed state of TrafficWatch
 type TrafficWatchStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// Nodes current status of nodes
-	Nodes []CurrentNodeTraffic `json:"nodes"`
+	Nodes map[string]CurrentNodeTraffic `json:"nodes"`
 }
 
 type CurrentNodeTraffic struct {
-	// Name of the Node
-	Name string `json:"name"`
-
 	// CurrentBandwidthPercent shows average use of bandwidth in last 10s
 	CurrentBandwidthPercent string `json:"currentBandwidthPercent"`
 

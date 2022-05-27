@@ -21,7 +21,6 @@ metadata:
     app.kubernetes.io/component: traffic-operator-exporter
     app.kubernetes.io/name: traffic-operator-node-exporter
   name: traffic-operator-node-exporter
-  namespace: traffic-operator-system
 spec:
   selector:
     matchLabels:
@@ -71,9 +70,15 @@ spec:
           name: root
 `
 
+// Namespace in which Node Exporter is be deployed
+var Namespace = "traffic-operator-system"
+
 // RBAC for creating DaemonSet
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create
+// RBAC for Pods
+//+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch
 
+// InitializeNodeExporter creates Node Exporter's DaemonSet
 func InitializeNodeExporter(mgr ctrl.Manager) error {
 	ctx := context.Background()
 	logger := ctrl.Log.WithName("setup")
@@ -86,6 +91,7 @@ func InitializeNodeExporter(mgr ctrl.Manager) error {
 		return err
 	}
 
+	// uncached client
 	c, err := client.New(mgr.GetConfig(), client.Options{})
 	if err != nil {
 		return err
@@ -97,7 +103,7 @@ func InitializeNodeExporter(mgr ctrl.Manager) error {
 	listOptions := client.MatchingLabels{"app.kubernetes.io/name": "traffic-operator"}
 	if err := c.List(ctx, pods, listOptions); err == nil && len(pods.Items) > 0 {
 		logger.Info("found traffic-operator pods", "#pods", len(pods.Items), "namespace", pods.Items[0].Namespace)
-		daemonSet.Namespace = pods.Items[0].Namespace
+		Namespace = pods.Items[0].Namespace
 	} else {
 		if err != nil {
 			logger.Error(err, "error while listing traffic-operator pods")
@@ -105,6 +111,7 @@ func InitializeNodeExporter(mgr ctrl.Manager) error {
 			logger.Info("no traffic-operator pods found")
 		}
 	}
+	daemonSet.Namespace = Namespace
 
 	if err := c.Create(ctx, daemonSet); err != nil && !errors.IsAlreadyExists(err) {
 		return err

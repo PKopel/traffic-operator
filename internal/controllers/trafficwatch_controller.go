@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -32,6 +33,7 @@ import (
 
 	"github.com/PKopel/traffic-operator/api/v1alpha1"
 	trafficv1alpha1 "github.com/PKopel/traffic-operator/api/v1alpha1"
+	"github.com/PKopel/traffic-operator/internal/initializers"
 	"github.com/PKopel/traffic-operator/internal/utils"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -56,8 +58,8 @@ type TrafficWatchReconciler struct {
 //+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/finalizers,verbs=update
-// RBAC for listing Pods
-//+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch
+// RBAC for Endpoints
+//+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
 
 // Reconcile updates TrafficWatch with current network usage statistics from worker nodes
 func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -74,20 +76,28 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	pods := &corev1.PodList{}
+	if len(tw.Status.Nodes) == 0 {
+		tw.Status.Nodes = make(map[string]trafficv1alpha1.CurrentNodeTraffic)
+	}
 
-	listOptions := client.MatchingLabels{"app.kubernetes.io/component": "traffic-operator-exporter"}
+	endpoints := &corev1.Endpoints{}
+	endpointsName := types.NamespacedName{
+		Namespace: initializers.Namespace,
+		Name:      "traffic-operator-node-exporter-service",
+	}
 
-	if err := r.List(ctx, pods, listOptions); err != nil {
+	if err := r.Get(ctx, endpointsName, endpoints); err != nil {
 		logger.Info("List Nodes error")
 		return ctrl.Result{RequeueAfter: longWait}, err
 	}
 
-	for i, pod := range pods.Items {
-		addr := pod.Status.PodIP
-		url := fmt.Sprintf("http://%s:9100/metrics", addr)
+	addresses := endpoints.Subsets[0].Addresses
+
+	for _, address := range addresses {
 
 		time := time.Now().Unix()
+
+		url := fmt.Sprintf("http://%s:9100/metrics", address.IP)
 
 		resp, err := http.Get(url)
 		if err != nil {
@@ -133,9 +143,14 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			totalTransmit += tmv
 		}
 
-		if len(tw.Status.Nodes) == len(pods.Items) {
-			prevTime := tw.Status.Nodes[i].Time
-			prevTransmit := float64(tw.Status.Nodes[i].CurrentTransmitTotal)
+		var node trafficv1alpha1.CurrentNodeTraffic
+
+		if len(tw.Status.Nodes) == len(addresses) {
+
+			node = tw.Status.Nodes[*address.NodeName]
+
+			prevTime := node.Time
+			prevTransmit := float64(node.CurrentTransmitTotal)
 			bwPercent := (totalTransmit - prevTransmit) * 100 / (float64(time-prevTime) * totalSpeed)
 			bwMax, err := strconv.ParseFloat(tw.Spec.MaxBandwidthPercent, 64)
 			if err != nil {
@@ -143,20 +158,20 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				continue
 			}
 
-			tw.Status.Nodes[i].CurrentTransmitTotal = int64(totalTransmit)
-			tw.Status.Nodes[i].CurrentBandwidthPercent = strconv.FormatFloat(bwPercent, 'e', -1, 64)
-			tw.Status.Nodes[i].Time = time
-			tw.Status.Nodes[i].Unfit = bwPercent > bwMax
+			node.CurrentTransmitTotal = int64(totalTransmit)
+			node.CurrentBandwidthPercent = strconv.FormatFloat(bwPercent, 'e', -1, 64)
+			node.Time = time
+			node.Unfit = bwPercent > bwMax
 		} else {
-			node := trafficv1alpha1.CurrentNodeTraffic{
+			node = trafficv1alpha1.CurrentNodeTraffic{
 				CurrentTransmitTotal:    int64(totalTransmit),
 				CurrentBandwidthPercent: "0",
 				Time:                    time,
 				Unfit:                   false,
 			}
-
-			tw.Status.Nodes = append(tw.Status.Nodes, node)
 		}
+
+		tw.Status.Nodes[*address.NodeName] = node
 	}
 
 	if err := r.Status().Update(ctx, tw); err != nil {

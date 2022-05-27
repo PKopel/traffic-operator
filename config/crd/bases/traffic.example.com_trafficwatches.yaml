@@ -46,8 +46,7 @@ spec:
             description: TrafficWatchStatus defines the observed state of TrafficWatch
             properties:
               nodes:
-                description: Nodes current status of nodes
-                items:
+                additionalProperties:
                   properties:
                     currentBandwidthPercent:
                       description: CurrentBandwidthPercent shows average use of bandwidth
@@ -57,9 +56,6 @@ spec:
                       description: CurrentTransmitTotal
                       format: int64
                       type: integer
-                    name:
-                      description: Name of the Node
-                      type: string
                     time:
                       description: Time
                       format: int64
@@ -70,11 +66,11 @@ spec:
                   required:
                   - currentBandwidthPercent
                   - currentTransmitTotal
-                  - name
                   - time
                   - unfit
                   type: object
-                type: array
+                description: Nodes current status of nodes
+                type: object
             required:
             - nodes
             type: object

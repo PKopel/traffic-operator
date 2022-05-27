@@ -5,7 +5,7 @@ metadata:
     prometheus.io/port: "9100"
     prometheus.io/scrape: "true"
   creationTimestamp: null
-  name: traffic-operator-node-exporter-servie
+  name: traffic-operator-node-exporter-service
 spec:
   ports:
   - name: traffic-operator-node-exporter
