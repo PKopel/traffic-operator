@@ -97,8 +97,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("Deploying Node Exporter")
-	if err := initializers.InitializeNodeExporter(mgr.GetClient()); err != nil {
+	setupLog.Info("deploying Node Exporter")
+	if err := initializers.InitializeNodeExporter(mgr); err != nil {
 		setupLog.Error(err, "problem deploying Node Exporter")
 		os.Exit(1)
 	}

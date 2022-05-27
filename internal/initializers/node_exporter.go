@@ -4,10 +4,12 @@ import (
 	"context"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -72,8 +74,9 @@ spec:
 // RBAC for creating DaemonSet
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create
 
-func InitializeNodeExporter(client client.Client) error {
+func InitializeNodeExporter(mgr ctrl.Manager) error {
 	ctx := context.Background()
+	logger := ctrl.Log.WithName("setup")
 
 	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDecoder()
 	daemonSet := &appsv1.DaemonSet{}
@@ -83,7 +86,27 @@ func InitializeNodeExporter(client client.Client) error {
 		return err
 	}
 
-	if err := client.Create(ctx, daemonSet); err != nil && !errors.IsAlreadyExists(err) {
+	c, err := client.New(mgr.GetConfig(), client.Options{})
+	if err != nil {
+		return err
+	}
+
+	pods := &corev1.PodList{}
+
+	logger.Info("listing traffic-operator pods")
+	listOptions := client.MatchingLabels{"app.kubernetes.io/name": "traffic-operator"}
+	if err := c.List(ctx, pods, listOptions); err == nil && len(pods.Items) > 0 {
+		logger.Info("found traffic-operator pods", "#pods", len(pods.Items), "namespace", pods.Items[0].Namespace)
+		daemonSet.Namespace = pods.Items[0].Namespace
+	} else {
+		if err != nil {
+			logger.Error(err, "error while listing traffic-operator pods")
+		} else {
+			logger.Info("no traffic-operator pods found")
+		}
+	}
+
+	if err := c.Create(ctx, daemonSet); err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
 	return nil

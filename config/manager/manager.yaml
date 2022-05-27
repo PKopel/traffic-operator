@@ -11,10 +11,14 @@ metadata:
   name: controller-manager
   namespace: system
   labels:
+    app.kubernetes.io/component: traffic-operator-controller
+    app.kubernetes.io/name: traffic-operator
     control-plane: controller-manager
 spec:
   selector:
     matchLabels:
+      app.kubernetes.io/component: traffic-operator-controller
+      app.kubernetes.io/name: traffic-operator
       control-plane: controller-manager
   replicas: 1
   template:
@@ -23,6 +27,8 @@ spec:
         kubectl.kubernetes.io/default-container: manager
       labels:
         control-plane: controller-manager
+        app.kubernetes.io/component: traffic-operator-controller
+        app.kubernetes.io/name: traffic-operator
     spec:
       securityContext:
         runAsNonRoot: true
