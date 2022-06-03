@@ -46,6 +46,8 @@ const (
 
 	nodeNetworkSpeed    = "node_network_speed_bytes"
 	nodeNetworkTransmit = "node_network_transmit_bytes_total"
+
+	trafficWatchLabel = "traffic.example.com/unfit"
 )
 
 // TrafficWatchReconciler reconciles a TrafficWatch object
@@ -60,6 +62,8 @@ type TrafficWatchReconciler struct {
 //+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/finalizers,verbs=update
 // RBAC for Endpoints
 //+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
+// RBAC for Nodes
+//+kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;update
 
 // Reconcile updates TrafficWatch with current network usage statistics from worker nodes
 func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -68,16 +72,22 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	defer cancel()
 
 	logger := log.FromContext(ctx)
-	logger.Info("Reconciling...")
+	logger.Info("reconciling...")
 
 	tw := &v1alpha1.TrafficWatch{}
 	if err := r.Get(ctx, req.NamespacedName, tw); err != nil {
-		logger.Info("Get TrafficWatch error")
+		logger.Info("get TrafficWatch error")
 		return ctrl.Result{}, err
 	}
 
 	if len(tw.Status.Nodes) == 0 {
 		tw.Status.Nodes = make(map[string]trafficv1alpha1.CurrentNodeTraffic)
+	}
+
+	nodes := &corev1.NodeList{}
+	if err := r.List(ctx, nodes); err != nil {
+		logger.Info("list Nodes error")
+		return ctrl.Result{RequeueAfter: longWait}, err
 	}
 
 	endpoints := &corev1.Endpoints{}
@@ -87,7 +97,7 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	if err := r.Get(ctx, endpointsName, endpoints); err != nil {
-		logger.Info("List Nodes error")
+		logger.Info("list Endpoints error")
 		return ctrl.Result{RequeueAfter: longWait}, err
 	}
 
@@ -101,13 +111,13 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		resp, err := http.Get(url)
 		if err != nil {
-			logger.Info("Metric request error")
+			logger.Info("metric request error")
 			return ctrl.Result{RequeueAfter: longWait}, err
 		}
 
 		metrics, err := utils.ParseAll(resp.Body)
 		if err != nil {
-			logger.Info("Metric parsing error")
+			logger.Info("metric parsing error")
 			return ctrl.Result{RequeueAfter: longWait}, err
 		}
 
@@ -131,51 +141,60 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 			smv, err := strconv.ParseFloat(sm.Value, 64)
 			if err != nil {
-				logger.Info("Could not parse smv float")
+				logger.Info("could not parse smv float")
 				continue
 			}
 			tmv, err := strconv.ParseFloat(tm.Value, 64)
 			if err != nil {
-				logger.Info("Could not parse tmv float")
+				logger.Info("could not parse tmv float")
 				continue
 			}
 			totalSpeed += smv
 			totalTransmit += tmv
 		}
 
-		var node trafficv1alpha1.CurrentNodeTraffic
+		var nt trafficv1alpha1.CurrentNodeTraffic
+		node := utils.First(nodes.Items, func(n corev1.Node) bool { return n.Name == *address.NodeName })
 
 		if len(tw.Status.Nodes) == len(addresses) {
 
-			node = tw.Status.Nodes[*address.NodeName]
+			nt = tw.Status.Nodes[*address.NodeName]
 
-			prevTime := node.Time
-			prevTransmit := float64(node.CurrentTransmitTotal)
+			prevTime := nt.Time
+			prevTransmit := float64(nt.CurrentTransmitTotal)
 			bwPercent := (totalTransmit - prevTransmit) * 100 / (float64(time-prevTime) * totalSpeed)
 			bwMax, err := strconv.ParseFloat(tw.Spec.MaxBandwidthPercent, 64)
 			if err != nil {
-				logger.Info("Could not parse maxBandwidthPercent float")
+				logger.Info("could not parse maxBandwidthPercent float")
 				continue
 			}
+			unfit := bwPercent > bwMax
 
-			node.CurrentTransmitTotal = int64(totalTransmit)
-			node.CurrentBandwidthPercent = strconv.FormatFloat(bwPercent, 'e', -1, 64)
-			node.Time = time
-			node.Unfit = bwPercent > bwMax
+			nt.CurrentTransmitTotal = int64(totalTransmit)
+			nt.CurrentBandwidthPercent = strconv.FormatFloat(bwPercent, 'e', -1, 64)
+			nt.Time = time
+			nt.Unfit = unfit
+
+			node.Labels[trafficWatchLabel] = strconv.FormatBool(unfit)
 		} else {
-			node = trafficv1alpha1.CurrentNodeTraffic{
+			nt = trafficv1alpha1.CurrentNodeTraffic{
 				CurrentTransmitTotal:    int64(totalTransmit),
 				CurrentBandwidthPercent: "0",
 				Time:                    time,
 				Unfit:                   false,
 			}
+			node.Labels[trafficWatchLabel] = "false"
 		}
 
-		tw.Status.Nodes[*address.NodeName] = node
+		tw.Status.Nodes[*address.NodeName] = nt
+		if err := r.Update(ctx, node); err != nil {
+			logger.Info("update Node error")
+			return ctrl.Result{RequeueAfter: longWait}, err
+		}
 	}
 
 	if err := r.Status().Update(ctx, tw); err != nil {
-		logger.Info("Update TrafficWatch error")
+		logger.Info("update TrafficWatch error")
 		return ctrl.Result{RequeueAfter: longWait}, err
 	}
 

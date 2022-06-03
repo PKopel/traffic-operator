@@ -11,7 +11,7 @@ spec:
     matchLabels:
       app.kubernetes.io/component: traffic-generator
       app.kubernetes.io/name: traffic-generator
-  replicas: 6
+  replicas: 20
   template:
     metadata:
       labels:
