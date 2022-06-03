@@ -1,7 +1,7 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: traffic-operator-node-exporter-service
+  name: node-exporter-service
   namespace: traffic-operator-system
   annotations:
     prometheus.io/scrape: "true"

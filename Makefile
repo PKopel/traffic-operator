@@ -89,10 +89,9 @@ help: ## Display this help.
 kind-create:
 	kind create cluster --config config/other/kind_config.yaml
 
-.PHONY: olm-deploy
-olm-deploy:
+.PHONY: olm-install
+olm-install:
 	operator-sdk olm install
-	kubectl apply -f config/olm
 
 .PHONY: kind-delete
 kind-delete:
@@ -160,6 +159,10 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: olm-deploy
+olm-deploy:
+	kubectl apply -f config/olm
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 .PHONY: controller-gen
