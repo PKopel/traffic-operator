@@ -19,7 +19,7 @@ There are two ways to deploy the Traffic Operator:
     ```
 
 Operator can be installed in any namespace, the default is `traffic-operator-system`.
-Repo contains also mock deployment [traffic_generator.yaml](config/samples/traffic_generator.yaml).
+Repo also contains mock deployment [traffic_generator.yaml](config/samples/traffic_generator.yaml).
 
 Docker images used by Traffic Operator:
 
