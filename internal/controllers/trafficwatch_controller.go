@@ -92,7 +92,7 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	endpoints := &corev1.Endpoints{}
 	endpointsName := types.NamespacedName{
-		Namespace: initializers.Namespace,
+		Namespace: initializers.GetNamespace(),
 		Name:      "traffic-operator-node-exporter-service",
 	}
 

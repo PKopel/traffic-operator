@@ -73,10 +73,6 @@ on threshold configured in `TrafficWatch` CR. Network usage metrics are provided
 [Node Exporter](https://prometheus.io/docs/guides/node-exporter/) `DaemonSet` deployed by
 the operator on [startup](internal/initializers/node_exporter.go).
 
-__! Not implemented !__
-Traffic Operator will create a deployment based on configuration provided in `TrafficWatch`
-and configure `nodeAffinity` so that pods will be created only on 'fit' nodes.
-
 ### Reconciliation loop
 
 [Reconciliation loop](internal/controllers/trafficwatch_controller.go) consists of following steps:
@@ -85,7 +81,7 @@ and configure `nodeAffinity` so that pods will be created only on 'fit' nodes.
 
 2. Polling each endpoint to get current network usage information
 
-3. Computing average bandwidth used on each worker node from information saved in `TrafficWatch` and provided by Node Exporter
+3. Computing average bandwidth used on each worker node from information saved in `TrafficWatch` and metrics provided by Node Exporter
 
 4. Saving current statistics in `TrafficWatch`
 
@@ -100,3 +96,36 @@ To limit number of reconciliation loop runs, controller uses a filter discarding
 - [config](config) - yaml files
 - [internal](internal) - controller code
 - [api](api/v1alpha1/) - api definitions
+
+## Future work
+
+__! Not implemented !__
+
+Traffic Operator will create a deployment based on configuration provided in `TrafficWatch`
+and configure `nodeAffinity` so that pods will be created only on 'fit' nodes. Operator will mark
+nodes with labels specific for each `TrafficWatch` resource.
+
+```yaml
+apiVersion: traffic.example.com/v1alpha1
+kind: TrafficWatch
+metadata:
+  name: trafficwatch-sample
+spec:
+  maxBandwidthPercent: "60"
+  deployment:
+    spec:
+      replicas: 20
+      template:
+        spec:
+          containers:
+            - name: example-app
+              image: example-app/image
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 128Mi
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+              command: ["app"]
+```

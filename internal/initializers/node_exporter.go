@@ -70,8 +70,12 @@ spec:
           name: root
 `
 
-// Namespace in which Node Exporter is be deployed
-var Namespace = "traffic-operator-system"
+// Namespace in which Node Exporter is to be deployed
+var namespace = "traffic-operator-system"
+
+func GetNamespace() string {
+	return namespace
+}
 
 // RBAC for creating DaemonSet
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create
@@ -79,7 +83,7 @@ var Namespace = "traffic-operator-system"
 //+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch
 
 // InitializeNodeExporter creates Node Exporter's DaemonSet
-func InitializeNodeExporter(mgr ctrl.Manager) error {
+func InitializeNodeExporter(mgr ctrl.Manager, ns string) error {
 	ctx := context.Background()
 	logger := ctrl.Log.WithName("setup")
 
@@ -98,20 +102,22 @@ func InitializeNodeExporter(mgr ctrl.Manager) error {
 	}
 
 	pods := &corev1.PodList{}
+	listOptions := client.MatchingLabels{"app.kubernetes.io/name": "traffic-operator"}
 
 	logger.Info("listing traffic-operator pods")
-	listOptions := client.MatchingLabels{"app.kubernetes.io/name": "traffic-operator"}
-	if err := c.List(ctx, pods, listOptions); err == nil && len(pods.Items) > 0 {
-		logger.Info("found traffic-operator pods", "#pods", len(pods.Items), "namespace", pods.Items[0].Namespace)
-		Namespace = pods.Items[0].Namespace
-	} else {
-		if err != nil {
-			logger.Error(err, "error while listing traffic-operator pods")
-		} else {
-			logger.Info("no traffic-operator pods found")
-		}
+	if err := c.List(ctx, pods, listOptions); err != nil {
+		logger.Error(err, "error while listing traffic-operator pods")
 	}
-	daemonSet.Namespace = Namespace
+
+	if len(pods.Items) > 0 {
+		logger.Info("found traffic-operator pods", "#pods", len(pods.Items), "namespace", pods.Items[0].Namespace)
+		namespace = pods.Items[0].Namespace
+	} else {
+		logger.Info("no traffic-operator pods found")
+		namespace = ns
+	}
+
+	daemonSet.Namespace = namespace
 
 	if err := c.Create(ctx, daemonSet); err != nil && !errors.IsAlreadyExists(err) {
 		return err
