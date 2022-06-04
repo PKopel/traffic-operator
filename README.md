@@ -1,8 +1,6 @@
 # Traffic Operator
 
-## Usage
-
-### Deployment
+## Deployment
 
 There are two ways to deploy the Traffic Operator:
 
@@ -26,6 +24,13 @@ Docker images used by Traffic Operator:
 - `pkopel/traffic-operator-catalog` - image for OLM's `CatalogSource` CR
 - `pkopel/traffic-operator-bundle` - CRDs and other resources for OLM
 - `pkopel/traffic-operator` - controller image
+
+## Overview
+
+Traffic Operator monitors network usage on worker nodes and marks them with labels based
+on threshold configured in `TrafficWatch` CR. Network usage metrics are provided by
+[Node Exporter](https://prometheus.io/docs/guides/node-exporter/) `DaemonSet` deployed by
+the operator on [startup](internal/initializers/node_exporter.go).
 
 ### Custom Resource
 
@@ -65,13 +70,6 @@ status:
       time: 1654276366
       unfit: false
 ```
-
-## Overview
-
-Traffic Operator monitors network usage on worker nodes and marks them with labels based
-on threshold configured in `TrafficWatch` CR. Network usage metrics are provided by
-[Node Exporter](https://prometheus.io/docs/guides/node-exporter/) `DaemonSet` deployed by
-the operator on [startup](internal/initializers/node_exporter.go).
 
 ### Reconciliation loop
 
