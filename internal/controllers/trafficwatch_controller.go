@@ -271,7 +271,12 @@ func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *v1alp
 	}
 
 	rdside := na.RequiredDuringSchedulingIgnoredDuringExecution
-	rdside.NodeSelectorTerms = append(rdside.NodeSelectorTerms, nst)
+	if rdside == nil {
+		rdside = &corev1.NodeSelector{}
+		rdside.NodeSelectorTerms = []corev1.NodeSelectorTerm{nst}
+	} else {
+		rdside.NodeSelectorTerms = append(rdside.NodeSelectorTerms, nst)
+	}
 
 	a.NodeAffinity = na
 	deploy.Spec.Template.Spec.Affinity = a
