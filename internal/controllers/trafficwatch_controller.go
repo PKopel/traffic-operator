@@ -261,12 +261,20 @@ func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *v1alp
 		},
 	}
 
-	na := deploy.Spec.Template.Spec.Affinity.NodeAffinity
+	a := deploy.Spec.Template.Spec.Affinity
+	if a == nil {
+		a = &corev1.Affinity{}
+	}
+	na := a.NodeAffinity
 	if na == nil {
 		na = &corev1.NodeAffinity{}
 	}
+
 	rdside := na.RequiredDuringSchedulingIgnoredDuringExecution
 	rdside.NodeSelectorTerms = append(rdside.NodeSelectorTerms, nst)
+
+	a.NodeAffinity = na
+	deploy.Spec.Template.Spec.Affinity = a
 
 	if err := r.Update(ctx, deploy); err != nil {
 		if errors.IsNotFound(err) {
