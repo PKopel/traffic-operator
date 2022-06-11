@@ -20,11 +20,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strconv"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -50,7 +50,7 @@ const (
 	nodeNetworkSpeed    = "node_network_speed_bytes"
 	nodeNetworkTransmit = "node_network_transmit_bytes_total"
 
-	trafficWatchLabel = "traffic.example.com/%s/unfit"
+	trafficWatchLabel = "%s.traffic.example.com/unfit"
 	metricsUrl        = "http://%s:9100/metrics"
 )
 
@@ -82,6 +82,11 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	if err := r.updateMetrics(ctx, tw); err != nil {
 		logger.Info("update metrics error")
+		return ctrl.Result{RequeueAfter: longWait}, err
+	}
+
+	if err := r.updateDeployment(ctx, tw); err != nil {
+		logger.Info("update deployment error")
 		return ctrl.Result{RequeueAfter: longWait}, err
 	}
 
@@ -181,7 +186,13 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *v1alpha1
 		node := utils.First(nodes.Items, func(n corev1.Node) bool {
 			return n.Name == *address.NodeName
 		})
-		twLabel := fmt.Sprintf(trafficWatchLabel, tw.Spec.Label)
+
+		var twLabel string
+		if tw.Spec.Label != "" {
+			twLabel = fmt.Sprintf(trafficWatchLabel, tw.Spec.Label)
+		} else {
+			twLabel = fmt.Sprintf(trafficWatchLabel, tw.Name)
+		}
 
 		if len(tw.Status.Nodes) == len(addresses) {
 
@@ -234,6 +245,10 @@ func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *v1alp
 	deploy := &appsv1.Deployment{}
 	deploy.Name = tw.Name
 	deploy.Namespace = tw.Namespace
+
+	or := v1.NewControllerRef(tw, tw.GroupVersionKind())
+	deploy.OwnerReferences = []v1.OwnerReference{*or}
+
 	deploy.Spec = tw.Spec.Deployment
 
 	nst := corev1.NodeSelectorTerm{
@@ -277,7 +292,9 @@ func filterStatusUpdates() predicate.Predicate {
 			if oldTw, ok := e.ObjectOld.(*trafficv1alpha1.TrafficWatch); ok {
 				newTw, _ := e.ObjectNew.(*trafficv1alpha1.TrafficWatch)
 				// Is TrafficWatch, ignore status and metadata updates
-				return reflect.DeepEqual(newTw.Spec, oldTw.Spec)
+				mbp := newTw.Spec.MaxBandwidthPercent != oldTw.Spec.MaxBandwidthPercent
+				l := newTw.Spec.Label != oldTw.Spec.Label
+				return mbp || l
 			}
 			// Is not TrafficWatch
 			return true
