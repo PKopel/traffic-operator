@@ -10,7 +10,7 @@ spec:
       matchLabels:
         app.kubernetes.io/component: trafficwatch-sample
         app.kubernetes.io/name: trafficwatch-sample
-    replicas: 20
+    replicas: 2
     template:
       metadata:
         labels:

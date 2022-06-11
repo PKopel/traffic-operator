@@ -245,6 +245,7 @@ func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *v1alp
 	deploy := &appsv1.Deployment{}
 	deploy.Name = tw.Name
 	deploy.Namespace = tw.Namespace
+	deploy.Labels = tw.Spec.Deployment.Template.Labels
 
 	or := v1.NewControllerRef(tw, tw.GroupVersionKind())
 	deploy.OwnerReferences = []v1.OwnerReference{*or}
@@ -284,10 +285,10 @@ func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *v1alp
 	if err := r.Update(ctx, deploy); err != nil {
 		if errors.IsNotFound(err) {
 			if err := r.Create(ctx, deploy); err != nil {
-				logger.Error(err, "error updating deployment")
+				logger.Error(err, "error creating deployment")
 				return err
 			}
-			logger.Error(err, "error creating deployment")
+			logger.Error(err, "error updating deployment")
 			return err
 		}
 	}

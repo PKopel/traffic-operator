@@ -12,7 +12,7 @@ metadata:
           },
           "spec": {
             "deployment": {
-              "replicas": 20,
+              "replicas": 2,
               "selector": {
                 "matchLabels": {
                   "app.kubernetes.io/component": "trafficwatch-sample",
