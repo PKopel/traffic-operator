@@ -36,6 +36,14 @@ rules:
   verbs:
   - create
 - apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - get
+  - update
+- apiGroups:
   - traffic.example.com
   resources:
   - trafficwatches

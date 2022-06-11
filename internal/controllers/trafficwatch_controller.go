@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,6 +37,7 @@ import (
 	trafficv1alpha1 "github.com/PKopel/traffic-operator/api/v1alpha1"
 	"github.com/PKopel/traffic-operator/internal/initializers"
 	"github.com/PKopel/traffic-operator/internal/utils"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -47,7 +50,8 @@ const (
 	nodeNetworkSpeed    = "node_network_speed_bytes"
 	nodeNetworkTransmit = "node_network_transmit_bytes_total"
 
-	trafficWatchLabel = "traffic.example.com/unfit"
+	trafficWatchLabel = "%s.traffic.example.com/unfit"
+	metricsUrl        = "http://%s:9100/metrics"
 )
 
 // TrafficWatchReconciler reconciles a TrafficWatch object
@@ -60,10 +64,6 @@ type TrafficWatchReconciler struct {
 //+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/finalizers,verbs=update
-// RBAC for Endpoints
-//+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
-// RBAC for Nodes
-//+kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;update
 
 // Reconcile updates TrafficWatch with current network usage statistics from worker nodes
 func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -80,25 +80,54 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	if err := r.updateMetrics(ctx, tw); err != nil {
+		logger.Info("update metrics error")
+		return ctrl.Result{RequeueAfter: longWait}, err
+	}
+
+	if err := r.updateDeployment(ctx, tw); err != nil {
+		logger.Info("update deployment error")
+		return ctrl.Result{RequeueAfter: longWait}, err
+	}
+
+	if err := r.Status().Update(ctx, tw); err != nil {
+		logger.Info("update TrafficWatch error")
+		return ctrl.Result{RequeueAfter: longWait}, err
+	}
+
+	return ctrl.Result{RequeueAfter: shortWait}, nil
+}
+
+// RBAC for Endpoints
+//+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
+// RBAC for Nodes
+//+kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;update
+
+// updateMetrics update TraficWatch status with current metrics
+func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *v1alpha1.TrafficWatch) error {
+
+	logger := log.FromContext(ctx)
+	logger.Info("updating status...")
+
 	if len(tw.Status.Nodes) == 0 {
 		tw.Status.Nodes = make(map[string]trafficv1alpha1.CurrentNodeTraffic)
 	}
 
 	nodes := &corev1.NodeList{}
 	if err := r.List(ctx, nodes); err != nil {
-		logger.Info("list Nodes error")
-		return ctrl.Result{RequeueAfter: longWait}, err
+		logger.Error(err, "list Nodes error")
+		return err
 	}
 
 	endpoints := &corev1.Endpoints{}
 	endpointsName := types.NamespacedName{
 		Namespace: initializers.GetNamespace(),
-		Name:      "traffic-operator-node-exporter-service",
+		Name:      initializers.NodeExporterServiceName,
 	}
 
 	if err := r.Get(ctx, endpointsName, endpoints); err != nil {
-		logger.Info("list Endpoints error")
-		return ctrl.Result{RequeueAfter: longWait}, err
+		logger.Error(err, "list Endpoints error")
+		return err
 	}
 
 	addresses := endpoints.Subsets[0].Addresses
@@ -107,18 +136,18 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 		time := time.Now().Unix()
 
-		url := fmt.Sprintf("http://%s:9100/metrics", address.IP)
+		url := fmt.Sprintf(metricsUrl, address.IP)
 
 		resp, err := http.Get(url)
 		if err != nil {
-			logger.Info("metric request error")
-			return ctrl.Result{RequeueAfter: longWait}, err
+			logger.Error(err, "metric request error")
+			return err
 		}
 
 		metrics, err := utils.ParseAll(resp.Body)
 		if err != nil {
-			logger.Info("metric parsing error")
-			return ctrl.Result{RequeueAfter: longWait}, err
+			logger.Error(err, "metric parsing error")
+			return err
 		}
 
 		speedMetrics := utils.Filter(metrics, func(m utils.Metric) bool {
@@ -141,12 +170,12 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 			smv, err := strconv.ParseFloat(sm.Value, 64)
 			if err != nil {
-				logger.Info("could not parse smv float")
+				logger.Error(err, "could not parse smv float")
 				continue
 			}
 			tmv, err := strconv.ParseFloat(tm.Value, 64)
 			if err != nil {
-				logger.Info("could not parse tmv float")
+				logger.Error(err, "could not parse tmv float")
 				continue
 			}
 			totalSpeed += smv
@@ -154,7 +183,16 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		var nt trafficv1alpha1.CurrentNodeTraffic
-		node := utils.First(nodes.Items, func(n corev1.Node) bool { return n.Name == *address.NodeName })
+		node := utils.First(nodes.Items, func(n corev1.Node) bool {
+			return n.Name == *address.NodeName
+		})
+
+		var twLabel string
+		if tw.Spec.Label != "" {
+			twLabel = fmt.Sprintf(trafficWatchLabel, tw.Spec.Label)
+		} else {
+			twLabel = fmt.Sprintf(trafficWatchLabel, tw.Name)
+		}
 
 		if len(tw.Status.Nodes) == len(addresses) {
 
@@ -165,7 +203,7 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			bwPercent := (totalTransmit - prevTransmit) * 100 / (float64(time-prevTime) * totalSpeed)
 			bwMax, err := strconv.ParseFloat(tw.Spec.MaxBandwidthPercent, 64)
 			if err != nil {
-				logger.Info("could not parse maxBandwidthPercent float")
+				logger.Error(err, "could not parse maxBandwidthPercent float")
 				continue
 			}
 			unfit := bwPercent > bwMax
@@ -175,7 +213,7 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			nt.Time = time
 			nt.Unfit = unfit
 
-			node.Labels[trafficWatchLabel] = strconv.FormatBool(unfit)
+			node.Labels[twLabel] = strconv.FormatBool(unfit)
 		} else {
 			nt = trafficv1alpha1.CurrentNodeTraffic{
 				CurrentTransmitTotal:    int64(totalTransmit),
@@ -183,22 +221,81 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				Time:                    time,
 				Unfit:                   false,
 			}
-			node.Labels[trafficWatchLabel] = "false"
+			node.Labels[twLabel] = "false"
 		}
 
 		tw.Status.Nodes[*address.NodeName] = nt
 		if err := r.Update(ctx, node); err != nil {
-			logger.Info("update Node error")
-			return ctrl.Result{RequeueAfter: longWait}, err
+			logger.Error(err, "update Node error")
+			return err
+		}
+	}
+	return nil
+}
+
+// RBAC for Deploymnets
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;create;update
+
+// updateDeployment update managed deployment
+func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *v1alpha1.TrafficWatch) error {
+
+	logger := log.FromContext(ctx)
+	logger.Info("updating deployment...")
+
+	deploy := &appsv1.Deployment{}
+	deploy.Name = tw.Name
+	deploy.Namespace = tw.Namespace
+	deploy.Labels = tw.Spec.Deployment.Selector.MatchLabels
+
+	or := v1.NewControllerRef(tw, tw.GroupVersionKind())
+	deploy.OwnerReferences = []v1.OwnerReference{*or}
+
+	deploy.Spec = *tw.Spec.Deployment.DeepCopy()
+	deploy.Spec.Template.Labels = deploy.Labels
+
+	nst := corev1.NodeSelectorTerm{
+		MatchExpressions: []corev1.NodeSelectorRequirement{
+			{
+				Key:      fmt.Sprintf(trafficWatchLabel, tw.Spec.Label),
+				Operator: corev1.NodeSelectorOpNotIn,
+				Values:   []string{"true"},
+			},
+		},
+	}
+
+	a := deploy.Spec.Template.Spec.Affinity
+	if a == nil {
+		a = &corev1.Affinity{}
+	}
+	na := a.NodeAffinity
+	if na == nil {
+		na = &corev1.NodeAffinity{}
+	}
+
+	rdside := na.RequiredDuringSchedulingIgnoredDuringExecution
+	if rdside == nil {
+		rdside = &corev1.NodeSelector{}
+		rdside.NodeSelectorTerms = []corev1.NodeSelectorTerm{nst}
+	} else {
+		rdside.NodeSelectorTerms = append(rdside.NodeSelectorTerms, nst)
+	}
+
+	na.RequiredDuringSchedulingIgnoredDuringExecution = rdside
+	a.NodeAffinity = na
+	deploy.Spec.Template.Spec.Affinity = a
+
+	if err := r.Update(ctx, deploy); err != nil {
+		if errors.IsNotFound(err) {
+			if err := r.Create(ctx, deploy); err != nil {
+				logger.Error(err, "error creating deployment")
+				return err
+			}
+			logger.Error(err, "error updating deployment")
+			return err
 		}
 	}
 
-	if err := r.Status().Update(ctx, tw); err != nil {
-		logger.Info("update TrafficWatch error")
-		return ctrl.Result{RequeueAfter: longWait}, err
-	}
-
-	return ctrl.Result{RequeueAfter: shortWait}, nil
+	return nil
 }
 
 // filterStatusUpdates blocks reconciliations caused by status updates
@@ -211,7 +308,9 @@ func filterStatusUpdates() predicate.Predicate {
 			if oldTw, ok := e.ObjectOld.(*trafficv1alpha1.TrafficWatch); ok {
 				newTw, _ := e.ObjectNew.(*trafficv1alpha1.TrafficWatch)
 				// Is TrafficWatch, ignore status and metadata updates
-				return newTw.Spec != oldTw.Spec
+				mbp := newTw.Spec.MaxBandwidthPercent != oldTw.Spec.MaxBandwidthPercent
+				l := newTw.Spec.Label != oldTw.Spec.Label
+				return mbp || l
 			}
 			// Is not TrafficWatch
 			return true

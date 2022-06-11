@@ -13,7 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const NodeExporterDaemonSetYaml = `
+const (
+	NodeExporterServiceName   = "traffic-operator-node-exporter-service"
+	NodeExporterDaemonSetYaml = `
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -69,6 +71,7 @@ spec:
             path: /
           name: root
 `
+)
 
 // Namespace in which Node Exporter is to be deployed
 var namespace = "traffic-operator-system"

@@ -4,3 +4,34 @@ metadata:
   name: trafficwatch-sample
 spec:
   maxBandwidthPercent: "60"
+  label: trafficwatch-sample
+  deployment:
+    selector:
+      matchLabels:
+        app.kubernetes.io/component: trafficwatch-sample
+        app.kubernetes.io/name: trafficwatch-sample
+    replicas: 2
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/component: trafficwatch-sample
+          app.kubernetes.io/name: trafficwatch-sample
+      spec:
+        containers:
+          - name: bash
+            image: bash
+            resources:
+              limits:
+                cpu: 500m
+                memory: 128Mi
+              requests:
+                cpu: 10m
+                memory: 64Mi
+            command:
+              - bash
+              - -c
+              - |
+                while true; do
+                    echo "working"
+                    sleep 10s
+                done
