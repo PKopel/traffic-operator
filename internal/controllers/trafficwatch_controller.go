@@ -245,12 +245,13 @@ func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *v1alp
 	deploy := &appsv1.Deployment{}
 	deploy.Name = tw.Name
 	deploy.Namespace = tw.Namespace
-	deploy.Labels = tw.Spec.Deployment.Template.Labels
+	deploy.Labels = tw.Spec.Deployment.Selector.MatchLabels
 
 	or := v1.NewControllerRef(tw, tw.GroupVersionKind())
 	deploy.OwnerReferences = []v1.OwnerReference{*or}
 
-	deploy.Spec = tw.Spec.Deployment
+	deploy.Spec = *tw.Spec.Deployment.DeepCopy()
+	deploy.Spec.Template.Labels = deploy.Labels
 
 	nst := corev1.NodeSelectorTerm{
 		MatchExpressions: []corev1.NodeSelectorRequirement{
@@ -279,6 +280,7 @@ func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *v1alp
 		rdside.NodeSelectorTerms = append(rdside.NodeSelectorTerms, nst)
 	}
 
+	na.RequiredDuringSchedulingIgnoredDuringExecution = rdside
 	a.NodeAffinity = na
 	deploy.Spec.Template.Spec.Affinity = a
 
