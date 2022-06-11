@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,6 +26,12 @@ type TrafficWatchSpec struct {
 	// MaxBandwidthPercent defines amount of traffic that will cause a Node
 	// to be matrked as "unfit" as a floating point value
 	MaxBandwidthPercent string `json:"maxBandwidthPercent"`
+
+	// Label for nodes
+	Label string `json:"label,omitempty"`
+
+	// Deployment defines desired state of managed application
+	Deployment appsv1.DeploymentSpec `json:"deployment"`
 }
 
 // TrafficWatchStatus defines the observed state of TrafficWatch
