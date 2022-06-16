@@ -43,9 +43,35 @@ metadata:
   name: trafficwatch-sample
 spec:
   maxBandwidthPercent: "60"
+  deployment:selector:
+      matchLabels:
+        app.kubernetes.io/component: trafficwatch-sample
+        app.kubernetes.io/name: trafficwatch-sample
+    replicas: 2
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/component: trafficwatch-sample
+          app.kubernetes.io/name: trafficwatch-sample
+      spec:
+        containers:
+          - name: example-app
+            image: example-app/image
+            resources:
+              limits:
+                cpu: 500m
+                memory: 128Mi
+              requests:
+                cpu: 10m
+                memory: 64Mi
+            command: ["app"]
 ```
 
 Important: `spec.maxBandwidthPercent` is a string, not a number, to allow for use of fractions (like `1.5e-03`).
+
+Traffic Operator will create a deployment based on configuration provided in `TrafficWatch`
+and configure `nodeAffinity` so that pods will be created only on 'fit' nodes. Operator will mark
+nodes with labels specific for each `TrafficWatch` resource.
 
 Reconciled `TrafficWatch` contains information about current network traffic on each worker node:
 
@@ -57,6 +83,28 @@ metadata:
   namespace: default
 spec:
   maxBandwidthPercent: "60"
+  deployment:selector:
+      matchLabels:
+        app.kubernetes.io/component: trafficwatch-sample
+        app.kubernetes.io/name: trafficwatch-sample
+    replicas: 2
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/component: trafficwatch-sample
+          app.kubernetes.io/name: trafficwatch-sample
+      spec:
+        containers:
+          - name: example-app
+            image: example-app/image
+            resources:
+              limits:
+                cpu: 500m
+                memory: 128Mi
+              requests:
+                cpu: 10m
+                memory: 64Mi
+            command: ["app"]
 status:
   nodes:
     kind-worker:
@@ -81,9 +129,11 @@ status:
 
 3. Computing average bandwidth used on each worker node from information saved in `TrafficWatch` and metrics provided by Node Exporter
 
-4. Saving current statistics in `TrafficWatch`
+4. Updating labels on each node
 
-5. Updating labels on each node
+5. Creating/updating `Deployment` defined in `TrafficWatch`
+
+6. Saving current statistics in `TrafficWatch`
 
 Reconciliation loop runs every 10s for each `TrafficWatch` CR if everything is alright, in case of errors reconciler waits 30s before next attempt.
 To limit number of reconciliation loop runs, controller uses a filter discarding update events that don't change `spec` field of the `TrafficWatch` CR.
@@ -94,36 +144,3 @@ To limit number of reconciliation loop runs, controller uses a filter discarding
 - [config](config) - yaml files
 - [internal](internal) - controller code
 - [api](api/v1alpha1/) - api definitions
-
-## Future work
-
-__! Not implemented !__
-
-Traffic Operator will create a deployment based on configuration provided in `TrafficWatch`
-and configure `nodeAffinity` so that pods will be created only on 'fit' nodes. Operator will mark
-nodes with labels specific for each `TrafficWatch` resource.
-
-```yaml
-apiVersion: traffic.example.com/v1alpha1
-kind: TrafficWatch
-metadata:
-  name: trafficwatch-sample
-spec:
-  maxBandwidthPercent: "60"
-  deployment:
-    spec:
-      replicas: 20
-      template:
-        spec:
-          containers:
-            - name: example-app
-              image: example-app/image
-              resources:
-                limits:
-                  cpu: 500m
-                  memory: 128Mi
-                requests:
-                  cpu: 10m
-                  memory: 64Mi
-              command: ["app"]
-```
