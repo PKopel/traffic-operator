@@ -1,8 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traffic-generator
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: traffic-generator
-  namespace: default
+  namespace: traffic-generator
   labels:
     app.kubernetes.io/component: traffic-generator
     app.kubernetes.io/name: traffic-generator
@@ -20,8 +25,22 @@ spec:
     spec:
       nodeName: kind-worker
       containers:
-        - name: bash
-          image: bash
+        - name: server
+          image: ealen/echo-server
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 64Mi
+          ports:
+            - containerPort: 80
+              protocol: TCP
+        - name: client
+          image: curlimages/curl
+          imagePullPolicy: IfNotPresent
           resources:
             limits:
               cpu: 500m
@@ -30,9 +49,25 @@ spec:
               cpu: 10m
               memory: 64Mi
           command:
-            - bash
+            - sh
             - -c
             - |
               while true; do
-                  wget --no-check-certificate "http://www.gutenberg.org/files/1301/1301-0.txt" -O - > /dev/null
+                  cat /dev/random | head -c 200m | curl "http://traffic-generator-svc.traffic-generator.svc.cluster.local" -d @- > /dev/null
               done
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: traffic-generator-svc
+  namespace: traffic-generator
+spec:
+  selector:
+    app.kubernetes.io/component: traffic-generator
+    app.kubernetes.io/name: traffic-generator
+  type: NodePort
+  ports:
+    - name: traffic-generator
+      protocol: TCP
+      port: 80
+      targetPort: 80

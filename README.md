@@ -27,10 +27,19 @@ Docker images used by Traffic Operator:
 
 ## Overview
 
-Traffic Operator monitors network usage on worker nodes and marks them with labels based
-on threshold configured in `TrafficWatch` CR. Network usage metrics are provided by
-[Node Exporter](https://prometheus.io/docs/guides/node-exporter/) `DaemonSet` deployed by
-the operator on [startup](internal/initializers/node_exporter.go).
+Traffic Operator monitors network usage on worker nodes and marks them with labels based on threshold
+configured in `TrafficWatch` CR. Network usage metrics are provided by
+[Node Exporter](https://prometheus.io/docs/guides/node-exporter/) `DaemonSet` deployed by the operator
+on [startup](internal/initializers/node_exporter.go). `TrafficWatch` CRs also contain specification of
+a `Deployment` that is being created and managed by the Traffic Operator.
+
+### Traffic generator
+
+Apart from Traffic Operator, this repo contains also a simple configuration to mock network traffic on
+cluster, the [traffic-generator](config/samples/traffic_generator.yaml). It contains a `Namespace`,
+a `Service` and a `Deployment`. Each `Pod` contains two containers, `server` and `client`. `server` is
+a simple http echo server, that is called by `client`s through the service, with data generated for
+each request from `/dev/rand`.
 
 ### Custom Resource
 
