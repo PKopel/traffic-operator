@@ -160,12 +160,12 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *v1alpha1
 
 		var totalSpeed, totalTransmit float64
 
-		for _, sm := range speedMetrics {
-			tm := utils.First(transmitMetrics, func(m utils.Metric) bool {
-				return m.Labels["device"] == sm.Labels["device"]
+		for _, tm := range transmitMetrics {
+			sm := utils.First(speedMetrics, func(m utils.Metric) bool {
+				return m.Labels["device"] == tm.Labels["device"]
 			})
-			if tm == nil {
-				continue
+			if sm == nil {
+				sm = &speedMetrics[0]
 			}
 
 			smv, err := strconv.ParseFloat(sm.Value, 64)
