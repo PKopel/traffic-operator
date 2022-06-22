@@ -16,14 +16,14 @@ spec:
     matchLabels:
       app.kubernetes.io/component: traffic-generator
       app.kubernetes.io/name: traffic-generator
-  replicas: 5
+  replicas: 10
   template:
     metadata:
       labels:
         app.kubernetes.io/component: traffic-generator
         app.kubernetes.io/name: traffic-generator
     spec:
-      nodeName: ip-172-31-0-101.ec2.internal
+      nodeName: kind-worker
       containers:
         - name: server
           image: ealen/echo-server

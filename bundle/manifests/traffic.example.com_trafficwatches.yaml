@@ -7599,8 +7599,12 @@ spec:
                   type: object
                 description: Nodes current status of nodes
                 type: object
+              ready:
+                description: Ready
+                type: boolean
             required:
             - nodes
+            - ready
             type: object
         type: object
     served: true

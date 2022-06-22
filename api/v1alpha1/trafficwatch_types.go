@@ -36,6 +36,9 @@ type TrafficWatchSpec struct {
 
 // TrafficWatchStatus defines the observed state of TrafficWatch
 type TrafficWatchStatus struct {
+	// Ready
+	Ready bool `json:"ready"`
+
 	// Nodes current status of nodes
 	Nodes map[string]CurrentNodeTraffic `json:"nodes"`
 }

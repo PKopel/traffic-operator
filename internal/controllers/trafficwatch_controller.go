@@ -85,9 +85,11 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{RequeueAfter: longWait}, err
 	}
 
-	if err := r.updateDeployment(ctx, tw); err != nil {
-		logger.Info("update deployment error")
-		return ctrl.Result{RequeueAfter: longWait}, err
+	if tw.Status.Ready {
+		if err := r.updateDeployment(ctx, tw); err != nil {
+			logger.Info("update deployment error")
+			return ctrl.Result{RequeueAfter: longWait}, err
+		}
 	}
 
 	if err := r.Status().Update(ctx, tw); err != nil {
@@ -200,6 +202,7 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *v1alpha1
 
 			prevTime := nt.Time
 			prevTransmit := float64(nt.CurrentTransmitTotal)
+			prevUnfit := nt.Unfit
 			bwPercent := (totalTransmit - prevTransmit) * 100 / (float64(time-prevTime) * totalSpeed)
 			bwMax, err := strconv.ParseFloat(tw.Spec.MaxBandwidthPercent, 64)
 			if err != nil {
@@ -213,7 +216,11 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *v1alpha1
 			nt.Time = time
 			nt.Unfit = unfit
 
-			node.Labels[twLabel] = strconv.FormatBool(unfit)
+			// wait one reconciliation before updating labels on nodes
+			if unfit == prevUnfit {
+				node.Labels[twLabel] = strconv.FormatBool(unfit)
+				tw.Status.Ready = true
+			}
 		} else {
 			nt = trafficv1alpha1.CurrentNodeTraffic{
 				CurrentTransmitTotal:    int64(totalTransmit),
@@ -221,7 +228,8 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *v1alpha1
 				Time:                    time,
 				Unfit:                   false,
 			}
-			node.Labels[twLabel] = "false"
+			node.Labels[twLabel] = "true"
+			tw.Status.Ready = false
 		}
 
 		tw.Status.Nodes[*address.NodeName] = nt
