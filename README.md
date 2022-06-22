@@ -31,7 +31,8 @@ Traffic Operator monitors network usage on worker nodes and marks them with labe
 configured in `TrafficWatch` CR. Network usage metrics are provided by
 [Node Exporter](https://prometheus.io/docs/guides/node-exporter/) `DaemonSet` deployed by the operator
 on [startup](internal/initializers/node_exporter.go). `TrafficWatch` CRs also contain specification of
-a `Deployment` that is being created and managed by the Traffic Operator.
+a `Deployment` that is being created and managed by the Traffic Operator. The deployment is created
+after two reconciliations to allow for gathering traffic data.
 
 ### Traffic generator
 
@@ -126,6 +127,7 @@ status:
       currentTransmitTotal: 283700
       time: 1654276366
       unfit: false
+  ready: true
 ```
 
 ### Reconciliation loop
@@ -138,9 +140,10 @@ status:
 
 3. Computing average bandwidth used on each worker node from information saved in `TrafficWatch` and metrics provided by Node Exporter
 
-4. Updating labels on each node
+4. If a node is in the same 'fit/unfit' state for two consecutive reconciliations, operator updates labels on it to reflect that state
 
-5. Creating/updating `Deployment` defined in `TrafficWatch`
+5. Creating/updating `Deployment` defined in `TrafficWatch` if the `TrafficWatch` is marked as ready (which happens after two succesfull
+  reconciliations)
 
 6. Saving current statistics in `TrafficWatch`
 
