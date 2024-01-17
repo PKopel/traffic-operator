@@ -2,38 +2,26 @@ name: CI
 
 on:
   pull_request:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
 
 env:
-  GO_VERSION: "1.20"
+  GO_VERSION: "1.21"
+  VERSION: "0.0.0"
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-
-      - name: Find the Go Build Cache
-        id: go
-        run: echo "::set-output name=cache::$(go env GOCACHE)"
-
-      - name: Cache the Go Build Cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.go.outputs.cache }}
-          key: ${{ runner.os }}-build-check-diff-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-build-check-diff-
-
-      - name: Cache Go Dependencies
-        uses: actions/cache@v2
-        with:
-          path: .work/pkg
-          key: ${{ runner.os }}-pkg-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-pkg-
 
       - name: Test
         run: make test
@@ -41,51 +29,103 @@ jobs:
   build:
     needs: [test]
     runs-on: ubuntu-latest
+    outputs:
+      bundle-image: ${{ steps.bundle.outputs.image }}
+      bundle-digest: ${{ steps.bundle.outputs.digest }}
+      catalog-image: ${{ steps.catalog.outputs.image }}
+      catalog-digest: ${{ steps.catalog.outputs.digest }}
+      controller-image: ${{ steps.controller.outputs.image }}
+      controller-digest: ${{ steps.controller.outputs.digest }}
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Set up operator-sdk
         run: |
           export ARCH=$(case $(uname -m) in x86_64) echo -n amd64 ;; aarch64) echo -n arm64 ;; *) echo -n $(uname -m) ;; esac)
           export OS=$(uname | awk '{print tolower($0)}')
-          export OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-sdk/releases/download/v1.20.0
+          export OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-sdk/releases/download/v1.33.0
           curl -LO ${OPERATOR_SDK_DL_URL}/operator-sdk_${OS}_${ARCH}
           chmod +x operator-sdk_${OS}_${ARCH} && sudo mv operator-sdk_${OS}_${ARCH} /usr/local/bin/operator-sdk
-
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ env.GO_VERSION }}
-
-      - name: Find the Go Build Cache
-        id: go
-        run: echo "::set-output name=cache::$(go env GOCACHE)"
-
-      - name: Cache the Go Build Cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.go.outputs.cache }}
-          key: ${{ runner.os }}-build-check-diff-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-build-check-diff-
-
-      - name: Cache Go Dependencies
-        uses: actions/cache@v2
-        with:
-          path: .work/pkg
-          key: ${{ runner.os }}-pkg-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-pkg-
+      
+      - name: Set up env variables
+        run: |
+          if ( ${{ startsWith(github.ref, 'refs/tags/') }} ); then
+            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=0.0.0-git-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          fi
 
       - name: Build controller image
-        run: make docker-build docker-push VERSION="0.0.0-$(git rev-parse --short HEAD)"
+        id: controller
+        run: |
+          make docker-build docker-push VERSION="${{ env.VERSION }}"
+          export IMAGE_NAME="$(make docker-image VERSION=${{ env.VERSION }})"
+          echo "image=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          export IMAGE_DIGEST="$(docker images --digests | grep ${IMAGE_NAME%:*} | awk '{ print $3 }')"
+          echo "digest=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
 
       - name: Build bundle image
-        run: make bundle bundle-build bundle-push VERSION="0.0.0-$(git rev-parse --short HEAD)"
+        id: bundle
+        run: | 
+          make bundle bundle-build bundle-push VERSION="${{ env.VERSION }}"
+          export IMAGE_NAME="$(make bundle-image VERSION=${{ env.VERSION }})"
+          echo "image=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          export IMAGE_DIGEST="$(docker images --digests | grep ${IMAGE_NAME%:*} | awk '{ print $3 }')"
+          echo "digest=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
 
       - name: Build catalog image
-        run: make catalog-build catalog-push VERSION="0.0.0-$(git rev-parse --short HEAD)"
+        id: catalog
+        run: |
+          make catalog-build catalog-push VERSION="${{ env.VERSION }}"
+          export IMAGE_NAME="$(make catalog-image VERSION=${{ env.VERSION }})"
+          echo "image=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+          export IMAGE_DIGEST="$(docker images --digests | grep ${IMAGE_NAME%:*} | awk '{ print $3 }')"
+          echo "digest=${IMAGE_DIGEST}" >> $GITHUB_OUTPUT
+  
+  provenance:
+    needs: [build]
+    strategy:
+      matrix:
+        include:
+          - image: bundle-image
+            digest: bundle-digest
+          - image: catalog-image
+            digest: catalog-digest
+          - image: controller-image
+            digest: controller-digest
+    permissions:
+      actions: read # for detecting the Github Actions environment.
+      id-token: write # for creating OIDC tokens for signing.
+      packages: write # for uploading attestations.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v1.9.0
+    with:
+      image: ${{ needs.build.outputs[matrix.image] }}
+      # The image digest is used to prevent TOCTOU issues.
+      # This is an output of the docker/build-push-action
+      # See: https://github.com/slsa-framework/slsa-verifier#toctou-attacks
+      digest: ${{ needs.build.outputs[matrix.digest] }}
+      registry-username: ${{ vars.DOCKERHUB_USERNAME }}
+    secrets:
+      registry-password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
+  
+
+  release:
+    needs: [build, provenance]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps: 
+      - name: Create release
+        uses: softprops/action-gh-release@v0.1.15

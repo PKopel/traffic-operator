@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2024.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/PKopel/traffic-operator/api/v1alpha1"
 	trafficv1alpha1 "github.com/PKopel/traffic-operator/api/v1alpha1"
 	"github.com/PKopel/traffic-operator/internal/initializers"
 	"github.com/PKopel/traffic-operator/internal/utils"
@@ -74,7 +73,7 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	logger := log.FromContext(ctx)
 	logger.Info("reconciling...")
 
-	tw := &v1alpha1.TrafficWatch{}
+	tw := &trafficv1alpha1.TrafficWatch{}
 	if err := r.Get(ctx, req.NamespacedName, tw); err != nil {
 		logger.Info("get TrafficWatch error")
 		return ctrl.Result{}, err
@@ -106,7 +105,7 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 //+kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;update
 
 // updateMetrics update TraficWatch status with current metrics
-func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *v1alpha1.TrafficWatch) error {
+func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *trafficv1alpha1.TrafficWatch) error {
 
 	logger := log.FromContext(ctx)
 	logger.Info("updating status...")
@@ -245,7 +244,7 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *v1alpha1
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;create;update
 
 // updateDeployment update managed deployment
-func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *v1alpha1.TrafficWatch) error {
+func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *trafficv1alpha1.TrafficWatch) error {
 
 	logger := log.FromContext(ctx)
 	logger.Info("updating deployment...")

@@ -40,6 +40,7 @@ spec:
   - name: Traffic Operator
     url: https://traffic-operator.domain
   maturity: alpha
+  minKubeVersion: 1.20.0
   provider:
     name: PKopel
   version: 0.0.0

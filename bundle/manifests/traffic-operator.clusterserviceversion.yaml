@@ -57,8 +57,9 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    operators.operatorframework.io/builder: operator-sdk-v1.19.0+git
-    operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
+    createdAt: "2024-01-17T00:14:59Z"
+    operators.operatorframework.io/builder: operator-sdk-v1.33.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
   name: traffic-operator.v0.0.1
   namespace: placeholder
 spec:
@@ -283,6 +284,7 @@ spec:
   - name: Traffic Operator
     url: https://traffic-operator.domain
   maturity: alpha
+  minKubeVersion: 1.20.0
   provider:
     name: PKopel
   version: 0.0.1

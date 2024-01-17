@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2024.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	trafficv1alpha1 "github.com/PKopel/traffic-operator/api/v1alpha1"
-	"github.com/PKopel/traffic-operator/internal/controllers"
+	controllers "github.com/PKopel/traffic-operator/internal/controller"
 	"github.com/PKopel/traffic-operator/internal/initializers"
 	//+kubebuilder:scaffold:imports
 )
