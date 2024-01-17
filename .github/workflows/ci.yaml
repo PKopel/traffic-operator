@@ -9,6 +9,7 @@ on:
 
 env:
   GO_VERSION: "1.21"
+  VERSION: "0.0.0"
 
 jobs:
   test:
@@ -63,7 +64,7 @@ jobs:
           if ( ${{ startsWith(github.ref, 'refs/tags/') }} ); then
             echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
           else
-            echo "VERSION=git-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+            echo "VERSION=0.0.0-git-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           fi
 
       - name: Build controller image
