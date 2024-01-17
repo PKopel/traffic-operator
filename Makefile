@@ -1,3 +1,4 @@
+OPERATOR_NAME ?= traffic-operator
 # VERSION defines the project version for the bundle.
 # Update this value when you upgrade the version of your project.
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
@@ -30,7 +31,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
 # This variable is used to construct full image tags for bundle and catalog images.
-IMAGE_TAG_BASE ?= pkopel/traffic-operator
+IMAGE_TAG_BASE ?= pkopel/$(OPERATOR_NAME)
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -122,14 +123,14 @@ test: manifests generate fmt vet envtest ## Run tests.
 ##@ Build
 
 .PHONY: build
-build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+build: manifests generate fmt vet ## Build manager binary.
+	go build -o bin/manager cmd/main.go
 
 NAMESPACE ?= default
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go --namespace $(NAMESPACE)
+	go run ./cmd/main.go
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
