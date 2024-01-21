@@ -2,6 +2,8 @@ module github.com/PKopel/traffic-operator
 
 go 1.21
 
+toolchain go1.21.3
+
 require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.30.0
