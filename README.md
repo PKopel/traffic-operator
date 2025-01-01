@@ -53,7 +53,8 @@ metadata:
   name: trafficwatch-sample
 spec:
   maxBandwidthPercent: "60"
-  deployment:selector:
+  deployment:
+    selector:
       matchLabels:
         app.kubernetes.io/component: trafficwatch-sample
         app.kubernetes.io/name: trafficwatch-sample
