@@ -54,7 +54,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    createdAt: "2025-01-01T16:25:42Z"
+    createdAt: "2025-01-01T16:37:42Z"
     operators.operatorframework.io/builder: operator-sdk-v1.38.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
   name: traffic-operator.v0.0.1
@@ -68,9 +68,8 @@ spec:
       kind: TrafficWatch
       name: trafficwatches.traffic.example.com
       version: v1alpha1
-  description: Operator managing node affinity of a deployment based on network traffic
-    in each node
-  displayName: traffic-operator
+  description: Operator managing pod placement based on network traffic limits
+  displayName: Traffic Operator
   icon:
   - base64data: ""
     mediatype: ""
@@ -246,13 +245,13 @@ spec:
         serviceAccountName: traffic-operator-controller-manager
     strategy: deployment
   installModes:
-  - supported: false
+  - supported: true
     type: OwnNamespace
   - supported: false
     type: SingleNamespace
   - supported: false
     type: MultiNamespace
-  - supported: true
+  - supported: false
     type: AllNamespaces
   keywords:
   - traffic

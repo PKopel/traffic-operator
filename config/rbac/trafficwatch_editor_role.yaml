@@ -4,21 +4,21 @@ kind: ClusterRole
 metadata:
   name: trafficwatch-editor-role
 rules:
-  - apiGroups:
-      - traffic.example.com
-    resources:
-      - trafficwatches
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - traffic.example.com
-    resources:
-      - trafficwatches/status
-    verbs:
-      - get
+- apiGroups:
+  - traffic.example.com
+  resources:
+  - trafficwatches
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - traffic.example.com
+  resources:
+  - trafficwatches/status
+  verbs:
+  - get

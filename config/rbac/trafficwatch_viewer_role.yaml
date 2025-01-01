@@ -4,17 +4,17 @@ kind: ClusterRole
 metadata:
   name: trafficwatch-viewer-role
 rules:
-  - apiGroups:
-      - traffic.example.com
-    resources:
-      - trafficwatches
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - traffic.example.com
-    resources:
-      - trafficwatches/status
-    verbs:
-      - get
+- apiGroups:
+  - traffic.example.com
+  resources:
+  - trafficwatches
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - traffic.example.com
+  resources:
+  - trafficwatches/status
+  verbs:
+  - get
