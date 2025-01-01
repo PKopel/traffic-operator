@@ -54,7 +54,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    createdAt: "2025-01-01T15:55:14Z"
+    createdAt: "2025-01-01T16:25:42Z"
     operators.operatorframework.io/builder: operator-sdk-v1.38.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
   name: traffic-operator.v0.0.1
@@ -81,6 +81,23 @@ spec:
         - apiGroups:
           - ""
           resources:
+          - endpoints
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - nodes
+          verbs:
+          - get
+          - list
+          - update
+          - watch
+        - apiGroups:
+          - ""
+          resources:
           - pods
           verbs:
           - list
@@ -91,6 +108,14 @@ spec:
           - daemonsets
           verbs:
           - create
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          verbs:
+          - create
+          - get
+          - update
         - apiGroups:
           - traffic.example.com
           resources:
@@ -129,13 +154,12 @@ spec:
           - subjectaccessreviews
           verbs:
           - create
-        serviceAccountName: output-dir-controller-manager
+        serviceAccountName: traffic-operator-controller-manager
       deployments:
       - label:
-          app.kubernetes.io/managed-by: kustomize
-          app.kubernetes.io/name: output-dir
+          app.kubernetes.io/name: traffic-operator
           control-plane: controller-manager
-        name: output-dir-controller-manager
+        name: traffic-operator-controller-manager
         spec:
           replicas: 1
           selector:
@@ -184,7 +208,7 @@ spec:
                     - ALL
               securityContext:
                 runAsNonRoot: true
-              serviceAccountName: output-dir-controller-manager
+              serviceAccountName: traffic-operator-controller-manager
               terminationGracePeriodSeconds: 10
       permissions:
       - rules:
@@ -219,7 +243,7 @@ spec:
           verbs:
           - create
           - patch
-        serviceAccountName: output-dir-controller-manager
+        serviceAccountName: traffic-operator-controller-manager
     strategy: deployment
   installModes:
   - supported: false

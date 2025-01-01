@@ -4,8 +4,7 @@ kind: ServiceMonitor
 metadata:
   labels:
     control-plane: controller-manager
-    app.kubernetes.io/name: output-dir
-    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: traffic-operator
   name: controller-manager-metrics-monitor
   namespace: system
 spec:

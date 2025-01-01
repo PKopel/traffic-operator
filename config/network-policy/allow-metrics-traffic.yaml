@@ -5,8 +5,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   labels:
-    app.kubernetes.io/name: output-dir
-    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: traffic-operator
   name: allow-metrics-traffic
   namespace: system
 spec:
@@ -18,9 +17,9 @@ spec:
   ingress:
     # This allows ingress traffic from any namespace with the label metrics: enabled
     - from:
-      - namespaceSelector:
-          matchLabels:
-            metrics: enabled  # Only from namespaces with this label
+        - namespaceSelector:
+            matchLabels:
+              metrics: enabled # Only from namespaces with this label
       ports:
         - port: 8443
           protocol: TCP
