@@ -61,8 +61,8 @@ type TrafficWatchReconciler struct {
 
 // RBAC for TrafficWatch
 // +kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/finalizers,verbs=update
+// +kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/finalizers,verbs=update
 
 // Reconcile updates TrafficWatch with current network usage statistics from worker nodes
 func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
