@@ -2,7 +2,6 @@ package utils
 
 import (
 	"io"
-	"io/ioutil"
 	"strings"
 )
 
@@ -42,9 +41,7 @@ func ParseLine(line string) Metric {
 }
 
 func ParseAll(metrics io.ReadCloser) ([]Metric, error) {
-	defer metrics.Close()
-
-	body, err := ioutil.ReadAll(metrics)
+	body, err := io.ReadAll(metrics)
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +59,8 @@ func ParseAll(metrics io.ReadCloser) ([]Metric, error) {
 	for i, line := range lines {
 		result[i] = ParseLine(line)
 	}
-
+	if err := metrics.Close(); err != nil {
+		return nil, err
+	}
 	return result, nil
 }

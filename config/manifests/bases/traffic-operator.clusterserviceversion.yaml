@@ -10,7 +10,7 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: TrafficWatch is the Schema for the trafficwatches API
+    - description: TrafficWatch is the Schema for the trafficwatches API.
       displayName: Traffic Watch
       kind: TrafficWatch
       name: trafficwatches.traffic.example.com
@@ -35,12 +35,16 @@ spec:
     type: AllNamespaces
   keywords:
   - traffic
-  - autoscaling
+  - affinity
+  - node
   links:
   - name: Traffic Operator
     url: https://traffic-operator.domain
+  maintainers:
+  - email: pawel.kopel2@gmail.com
+    name: PKopel
   maturity: alpha
-  minKubeVersion: 1.20.0
   provider:
     name: PKopel
+    url: https://github.com/PKopel
   version: 0.0.0

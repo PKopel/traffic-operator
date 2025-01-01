@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2025.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// TrafficWatchSpec defines the desired state of TrafficWatch
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// TrafficWatchSpec defines the desired state of TrafficWatch.
 type TrafficWatchSpec struct {
 	// MaxBandwidthPercent defines amount of traffic that will cause a Node
 	// to be matrked as "unfit" as a floating point value
@@ -34,7 +37,7 @@ type TrafficWatchSpec struct {
 	Deployment appsv1.DeploymentSpec `json:"deployment"`
 }
 
-// TrafficWatchStatus defines the observed state of TrafficWatch
+// TrafficWatchStatus defines the observed state of TrafficWatch.
 type TrafficWatchStatus struct {
 	// Ready
 	Ready bool `json:"ready"`
@@ -57,10 +60,10 @@ type CurrentNodeTraffic struct {
 	Unfit bool `json:"unfit"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
-// TrafficWatch is the Schema for the trafficwatches API
+// TrafficWatch is the Schema for the trafficwatches API.
 type TrafficWatch struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -69,9 +72,9 @@ type TrafficWatch struct {
 	Status TrafficWatchStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
-// TrafficWatchList contains a list of TrafficWatch
+// TrafficWatchList contains a list of TrafficWatch.
 type TrafficWatchList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

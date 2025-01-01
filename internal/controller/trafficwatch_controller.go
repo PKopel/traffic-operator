@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package controller
 
 import (
 	"context"
@@ -60,9 +60,9 @@ type TrafficWatchReconciler struct {
 }
 
 // RBAC for TrafficWatch
-//+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/finalizers,verbs=update
+// +kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=traffic.example.com,resources=trafficwatches/finalizers,verbs=update
 
 // Reconcile updates TrafficWatch with current network usage statistics from worker nodes
 func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -100,9 +100,9 @@ func (r *TrafficWatchReconciler) Reconcile(ctx context.Context, req ctrl.Request
 }
 
 // RBAC for Endpoints
-//+kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=endpoints,verbs=get;list;watch
 // RBAC for Nodes
-//+kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;update
 
 // updateMetrics update TraficWatch status with current metrics
 func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *trafficv1alpha1.TrafficWatch) error {
@@ -241,7 +241,7 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *trafficv
 }
 
 // RBAC for Deploymnets
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;create;update
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;create;update
 
 // updateDeployment update managed deployment
 func (r *TrafficWatchReconciler) updateDeployment(ctx context.Context, tw *trafficv1alpha1.TrafficWatch) error {

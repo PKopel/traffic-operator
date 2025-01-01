@@ -3,13 +3,14 @@ kind: Service
 metadata:
   labels:
     control-plane: controller-manager
+    app.kubernetes.io/name: traffic-operator
   name: controller-manager-metrics-service
   namespace: system
 spec:
   ports:
-  - name: https
-    port: 8443
-    protocol: TCP
-    targetPort: https
+    - name: https
+      port: 8443
+      protocol: TCP
+      targetPort: 8443
   selector:
     control-plane: controller-manager
