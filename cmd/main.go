@@ -29,6 +29,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
@@ -164,7 +165,15 @@ func main() {
 	}
 
 	setupLog.Info("deploying Node Exporter")
-	if err := initializers.InitializeNodeExporter(mgr, namespace); err != nil {
+
+	// uncached client
+	c, err := client.New(mgr.GetConfig(), client.Options{})
+	if err != nil {
+		setupLog.Error(err, "unable to create k8s client")
+		os.Exit(1)
+	}
+
+	if err := initializers.InitializeNodeExporter(c, namespace); err != nil {
 		setupLog.Error(err, "problem deploying Node Exporter")
 		os.Exit(1)
 	}

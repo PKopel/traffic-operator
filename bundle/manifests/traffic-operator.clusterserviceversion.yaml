@@ -54,7 +54,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    createdAt: "2025-01-01T16:37:42Z"
+    createdAt: "2025-01-01T16:59:36Z"
     operators.operatorframework.io/builder: operator-sdk-v1.38.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
   name: traffic-operator.v0.0.1
@@ -99,6 +99,14 @@ spec:
           resources:
           - pods
           verbs:
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - services
+          verbs:
+          - create
           - list
           - watch
         - apiGroups:
