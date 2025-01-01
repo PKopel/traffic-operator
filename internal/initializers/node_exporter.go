@@ -81,9 +81,9 @@ func GetNamespace() string {
 }
 
 // RBAC for creating DaemonSet
-//+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create
+// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create
 // RBAC for Pods
-//+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch
+// +kubebuilder:rbac:groups="",resources=pods,verbs=list;watch
 
 // InitializeNodeExporter creates Node Exporter's DaemonSet
 func InitializeNodeExporter(mgr ctrl.Manager, ns string) error {
