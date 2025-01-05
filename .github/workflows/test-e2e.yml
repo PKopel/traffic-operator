@@ -27,7 +27,7 @@ jobs:
         run: kind version
 
       - name: Create kind cluster
-        run: kind create cluster
+        run: kind create cluster --config config/other/kind_config.yaml
 
       - name: Running Test e2e
         run: |
