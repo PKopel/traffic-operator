@@ -30,9 +30,7 @@ metadata:
                   "containers": [
                     {
                       "command": [
-                        "bash",
-                        "-c",
-                        "while true; do\n    echo \"working\"\n    sleep 10s\ndone\n"
+                        "app"
                       ],
                       "image": "bash",
                       "name": "bash",
@@ -51,14 +49,13 @@ metadata:
                 }
               }
             },
-            "label": "trafficwatch-sample",
             "maxBandwidthPercent": "60"
           }
         }
       ]
     capabilities: Basic Install
-    createdAt: "2024-01-17T00:14:59Z"
-    operators.operatorframework.io/builder: operator-sdk-v1.33.0
+    createdAt: "2025-01-01T16:59:36Z"
+    operators.operatorframework.io/builder: operator-sdk-v1.38.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
   name: traffic-operator.v0.0.1
   namespace: placeholder
@@ -66,7 +63,7 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: TrafficWatch is the Schema for the trafficwatches API
+    - description: TrafficWatch is the Schema for the trafficwatches API.
       displayName: Traffic Watch
       kind: TrafficWatch
       name: trafficwatches.traffic.example.com
@@ -102,6 +99,14 @@ spec:
           resources:
           - pods
           verbs:
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - services
+          verbs:
+          - create
           - list
           - watch
         - apiGroups:
@@ -159,7 +164,6 @@ spec:
         serviceAccountName: traffic-operator-controller-manager
       deployments:
       - label:
-          app.kubernetes.io/component: traffic-operator-controller
           app.kubernetes.io/name: traffic-operator
           control-plane: controller-manager
         name: traffic-operator-controller-manager
@@ -167,8 +171,6 @@ spec:
           replicas: 1
           selector:
             matchLabels:
-              app.kubernetes.io/component: traffic-operator-controller
-              app.kubernetes.io/name: traffic-operator
               control-plane: controller-manager
           strategy: {}
           template:
@@ -176,37 +178,16 @@ spec:
               annotations:
                 kubectl.kubernetes.io/default-container: manager
               labels:
-                app.kubernetes.io/component: traffic-operator-controller
-                app.kubernetes.io/name: traffic-operator
                 control-plane: controller-manager
             spec:
               containers:
               - args:
-                - --secure-listen-address=0.0.0.0:8443
-                - --upstream=http://127.0.0.1:8080/
-                - --logtostderr=true
-                - --v=0
-                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
-                name: kube-rbac-proxy
-                ports:
-                - containerPort: 8443
-                  name: https
-                  protocol: TCP
-                resources:
-                  limits:
-                    cpu: 500m
-                    memory: 128Mi
-                  requests:
-                    cpu: 5m
-                    memory: 64Mi
-              - args:
-                - --health-probe-bind-address=:8081
-                - --metrics-bind-address=127.0.0.1:8080
+                - --metrics-bind-address=:8443
                 - --leader-elect
+                - --health-probe-bind-address=:8081
                 command:
                 - /manager
                 image: pkopel/traffic-operator:v0.0.1
-                imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -229,6 +210,9 @@ spec:
                     memory: 64Mi
                 securityContext:
                   allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
               securityContext:
                 runAsNonRoot: true
               serviceAccountName: traffic-operator-controller-manager
@@ -279,12 +263,16 @@ spec:
     type: AllNamespaces
   keywords:
   - traffic
-  - autoscaling
+  - affinity
+  - node
   links:
   - name: Traffic Operator
     url: https://traffic-operator.domain
+  maintainers:
+  - email: pawel.kopel2@gmail.com
+    name: PKopel
   maturity: alpha
-  minKubeVersion: 1.20.0
   provider:
     name: PKopel
+    url: https://github.com/PKopel
   version: 0.0.1

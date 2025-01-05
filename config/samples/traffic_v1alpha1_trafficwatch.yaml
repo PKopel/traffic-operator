@@ -4,7 +4,6 @@ metadata:
   name: trafficwatch-sample
 spec:
   maxBandwidthPercent: "60"
-  label: trafficwatch-sample
   deployment:
     selector:
       matchLabels:
@@ -27,11 +26,4 @@ spec:
               requests:
                 cpu: 10m
                 memory: 64Mi
-            command:
-              - bash
-              - -c
-              - |
-                while true; do
-                    echo "working"
-                    sleep 10s
-                done
+            command: ["app"]

@@ -75,22 +75,24 @@ spec:
 
 // Namespace in which Node Exporter is to be deployed
 var namespace = "traffic-operator-system"
+var decoder = serializer.NewCodecFactory(scheme.Scheme).UniversalDecoder()
 
 func GetNamespace() string {
 	return namespace
 }
 
 // RBAC for creating DaemonSet
-//+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create
+// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=create
+// RBAC for creating Service
+// +kubebuilder:rbac:groups="",resources=services,verbs=create;list;watch
 // RBAC for Pods
-//+kubebuilder:rbac:groups="",resources=pods,verbs=list;watch
+// +kubebuilder:rbac:groups="",resources=pods,verbs=list;watch
 
 // InitializeNodeExporter creates Node Exporter's DaemonSet
-func InitializeNodeExporter(mgr ctrl.Manager, ns string) error {
+func InitializeNodeExporter(c client.Client, ns string) error {
 	ctx := context.Background()
 	logger := ctrl.Log.WithName("setup")
 
-	decoder := serializer.NewCodecFactory(scheme.Scheme).UniversalDecoder()
 	daemonSet := &appsv1.DaemonSet{}
 
 	err := runtime.DecodeInto(decoder, []byte(NodeExporterDaemonSetYaml), daemonSet)
@@ -98,16 +100,10 @@ func InitializeNodeExporter(mgr ctrl.Manager, ns string) error {
 		return err
 	}
 
-	// uncached client
-	c, err := client.New(mgr.GetConfig(), client.Options{})
-	if err != nil {
-		return err
-	}
-
 	pods := &corev1.PodList{}
 	listOptions := client.MatchingLabels{"app.kubernetes.io/name": "traffic-operator"}
 
-	logger.Info("listing traffic-operator pods")
+	logger.Info("listing traffic-operator pods...")
 	if err := c.List(ctx, pods, listOptions); err != nil {
 		logger.Error(err, "error while listing traffic-operator pods")
 	}

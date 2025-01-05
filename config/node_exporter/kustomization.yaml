@@ -1,2 +1,3 @@
 resources:
   - node_exporter_service.yaml
+  - node_exporter_daemon_set.yaml
