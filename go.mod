@@ -2,7 +2,7 @@ module github.com/PKopel/traffic-operator
 
 go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.24.1
 
 require (
 	github.com/onsi/ginkgo/v2 v2.23.0
@@ -71,7 +71,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
