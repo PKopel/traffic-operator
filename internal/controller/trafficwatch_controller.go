@@ -38,6 +38,7 @@ import (
 	"github.com/PKopel/traffic-operator/internal/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 )
 
 const (
@@ -120,24 +121,24 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *trafficv
 		return err
 	}
 
-	endpoints := &corev1.Endpoints{}
+	endpointSlice := &discoveryv1.EndpointSlice{}
 	endpointsName := types.NamespacedName{
 		Namespace: initializers.GetNamespace(),
 		Name:      initializers.NodeExporterServiceName,
 	}
 
-	if err := r.Get(ctx, endpointsName, endpoints); err != nil {
+	if err := r.Get(ctx, endpointsName, endpointSlice); err != nil {
 		logger.Error(err, "list Endpoints error")
 		return err
 	}
 
-	addresses := endpoints.Subsets[0].Addresses
+	endpoints := endpointSlice.Endpoints
 
-	for _, address := range addresses {
+	for _, endpoint := range endpoints {
 
 		time := time.Now().Unix()
 
-		url := fmt.Sprintf(metricsUrl, address.IP)
+		url := fmt.Sprintf(metricsUrl, *endpoint.Hostname)
 
 		resp, err := http.Get(url)
 		if err != nil {
@@ -185,7 +186,7 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *trafficv
 
 		var nt trafficv1alpha1.CurrentNodeTraffic
 		node := utils.First(nodes.Items, func(n corev1.Node) bool {
-			return n.Name == *address.NodeName
+			return n.Name == *endpoint.NodeName
 		})
 
 		var twLabel string
@@ -195,9 +196,9 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *trafficv
 			twLabel = fmt.Sprintf(trafficWatchLabel, tw.Name)
 		}
 
-		if len(tw.Status.Nodes) == len(addresses) {
+		if len(tw.Status.Nodes) == len(endpoints) {
 
-			nt = tw.Status.Nodes[*address.NodeName]
+			nt = tw.Status.Nodes[*endpoint.NodeName]
 
 			prevTime := nt.Time
 			prevTransmit := float64(nt.CurrentTransmitTotal)
@@ -231,7 +232,7 @@ func (r *TrafficWatchReconciler) updateMetrics(ctx context.Context, tw *trafficv
 			tw.Status.Ready = false
 		}
 
-		tw.Status.Nodes[*address.NodeName] = nt
+		tw.Status.Nodes[*endpoint.NodeName] = nt
 		if err := r.Update(ctx, node); err != nil {
 			logger.Error(err, "update Node error")
 			return err
