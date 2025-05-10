@@ -126,6 +126,8 @@ jobs:
     needs: [build, provenance]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write # Required to create a release and upload assets.
     steps: 
       - name: Create release
         uses: softprops/action-gh-release@v2.2.2
